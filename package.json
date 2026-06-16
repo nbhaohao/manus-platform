@@ -5,7 +5,11 @@
   "scripts": {
     "test": "vitest run",
     "verify": "vitest run tests/m01.test.ts",
-    "v": "vitest run -t"
+    "v": "vitest run -t",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "hono": "^4.7.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
