@@ -4,11 +4,12 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "verify": "vitest run tests/m01.test.ts",
+    "verify": "vitest run tests/m02.test.ts",
     "v": "vitest run -t",
     "start": "tsx src/main.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.5",
     "hono": "^4.7.0"
   },
   "devDependencies": {

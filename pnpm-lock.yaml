@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@hono/node-server':
+        specifier: ^2.0.5
+        version: 2.0.5(hono@4.12.25)
       hono:
         specifier: ^4.7.0
         version: 4.12.25
@@ -191,6 +194,12 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@hono/node-server@2.0.5':
+    resolution: {integrity: sha512-yQFvDmyDo3y6rEOJZDUYPJ49DIKTPpIk4kGvm40xx4Ejne0Pu9a1+exxPN+C1UppWK/WGZX9F++/Xs231tE86g==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
@@ -730,6 +739,10 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.1':
     optional: true
+
+  '@hono/node-server@2.0.5(hono@4.12.25)':
+    dependencies:
+      hono: 4.12.25
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
