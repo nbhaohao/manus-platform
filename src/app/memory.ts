@@ -20,6 +20,7 @@ export async function addToMemory(
       content: systemPrompt,
     });
   }
+
   memory.addMessages(messages);
   if (saveHook) {
     await saveHook(memory);

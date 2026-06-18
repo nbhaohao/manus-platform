@@ -1,9 +1,9 @@
 // e2e_m02.ts — m02 全链路冒烟（/api/status 回归 + Memory 流水线）
 // Run: pnpm tsx scripts/e2e_m02.ts [baseUrl]
 
-import { fileURLToPath } from 'url'
-import { Memory } from '../src/domain/memory.ts'
-import { addToMemory } from '../src/app/memory.ts'
+import { fileURLToPath } from "url";
+import { Memory } from "../src/domain/memory.ts";
+import { addToMemory } from "../src/app/memory.ts";
 
 export async function runE2e(
   baseUrl: string,
@@ -18,19 +18,33 @@ export async function runE2e(
   //    if (m.getMessages().length !== 2) throw new Error('memory pipeline failed')
   //    if (m.getMessages()[0].role !== 'system') throw new Error('system prompt missing')
   // 3. return { ok: true, statusOk: true, memoryOk: true }
-  throw new Error('TODO: stage 5')
+  const statusRes = await fetchFn(`${baseUrl}/api/status`);
+  const body = await statusRes.json();
+  if (!statusRes.ok || !body.ok) throw new Error("status endpoint failed");
+
+  const m = new Memory();
+  await addToMemory(
+    m,
+    [{ role: "user", content: "hello" }],
+    "You are helpful.",
+  );
+  if (m.getMessages().length !== 2) throw new Error("memory pipeline failed");
+  if (m.getMessages()[0].role !== "system")
+    throw new Error("system prompt missing");
+
+  return { ok: true, statusOk: true, memoryOk: true };
 }
 
-const __filename = fileURLToPath(import.meta.url)
+const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] === __filename) {
-  const baseUrl = process.argv[2] ?? 'http://localhost:8000'
+  const baseUrl = process.argv[2] ?? "http://localhost:8000";
   runE2e(baseUrl)
-    .then(r => {
-      console.log(`m02 e2e OK — status:${r.statusOk} memory:${r.memoryOk}`)
-      process.exit(0)
+    .then((r) => {
+      console.log(`m02 e2e OK — status:${r.statusOk} memory:${r.memoryOk}`);
+      process.exit(0);
     })
     .catch((e: unknown) => {
-      console.error((e as Error).message)
-      process.exit(1)
-    })
+      console.error((e as Error).message);
+      process.exit(1);
+    });
 }
