@@ -83,7 +83,7 @@ export class BaseAgent {
     //        const filtered: LLMMessage = { role:'assistant', content: resp.content }
     //        if (resp.reasoning_content) filtered.reasoning_content = resp.reasoning_content
     //        if (resp.tool_calls?.length) filtered.tool_calls = resp.tool_calls
-    //                                  // ↑ stage 3 再改成 resp.tool_calls.slice(0, 1)
+    //                                  // ↑ 本关原样保留全部；stage 3 会在此加「单工具限制」
     //        await addToMemory(this.memory, [filtered], this.systemPrompt)
     //        return filtered
     //      } catch (e) { lastErr = String(e); continue }
@@ -117,18 +117,7 @@ export class BaseAgent {
     //      const tcs = message.tool_calls as LLMToolCall[] | undefined
     //      if (!tcs || tcs.length === 0) break          // 终态：LLM 给了文本答案
     //      const toolMessages: LLMMessage[] = []
-    //      for (const tc of tcs) {
-    //        if (!tc.function) continue
-    //        // ── stage 4：解析工具调用 → 执行 → 回填 ──
-    //        //   const toolCallId = tc.id || randomUUID()
-    //        //   const fnName = tc.function.name
-    //        //   const fnArgs = (await parseJSON(tc.function.arguments, {})) as Record<string, unknown>
-    //        //   const tool = this.getTool(fnName)
-    //        //   // ── stage 5：执行前 yield ToolEvent(status:'calling') ──
-    //        //   const result = await this.invokeTool(tool, fnName, fnArgs)
-    //        //   // ── stage 5：执行后 yield ToolEvent(status:'called', functionResult: result) ──
-    //        //   toolMessages.push({ role:'tool', tool_call_id: toolCallId, content: JSON.stringify(result) })
-    //      }
+    //      // —— 本关(stage 1)循环体先留空 —— 工具执行 + 事件产出留到 stage 4/5（见各关卡页）
     //      message = await this.invokeLlm(toolMessages)   // 带工具结果再问，进入下一轮
     //    }
     // 4. 超过最大迭代且仍在调用工具 → yield createEvent('error', {...}) as ErrorEvent; return
@@ -136,8 +125,8 @@ export class BaseAgent {
     //      → yield createEvent('message', { role:'assistant', message: message.content, attachments: [] }) as MessageEvent
     //    否则 → yield createEvent('error', { error:'Agent 未能生成有效回复内容' }) as ErrorEvent
     //
-    // 提示：stage 1 先把 3 里两个 stage 4/5 注释块留空（循环体只有 toolMessages=[] + 再次 invokeLlm），
-    //       即可让「终态」「最大迭代」两条断言变绿；工具执行/事件留到 stage 4/5。
+    // 提示：stage 1 只搭循环控制——循环体先留空（toolMessages=[] + 再次 invokeLlm），
+    //       「终态」「最大迭代」两条断言即可变绿；工具执行/事件留到 stage 4/5。
     throw new Error("TODO: stage 1");
   }
 }
