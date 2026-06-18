@@ -7,5 +7,14 @@ export async function parseJSON(text: string, defaultValue: unknown = null): Pro
   // 2. const m = /```(?:json)?\s*([\s\S]*?)```/.exec(text)
   //    if (m) try { return JSON.parse(m[1].trim()) } catch { /* 继续 */ }
   // 3. return defaultValue
-  throw new Error('TODO: stage 2')
+  
+  try { return JSON.parse(text) } catch { /* 继续 */ }
+  const m = /```(?:json)?\s*([\s\S]*?)```/.exec(text)
+  if (m) {
+    try {
+      const json = JSON.parse(m[1].trim())
+      return json
+    } catch { /* 继续 */ }
+  }
+  return defaultValue
 }
