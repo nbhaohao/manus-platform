@@ -192,8 +192,22 @@ export class BaseAgent {
         unknown
       >;
       const tool = this.getTool(fnName);
+      yield createEvent("tool", {
+        toolCallId,
+        toolName: tool.name,
+        functionName: fnName,
+        functionArgs: fnArgs,
+        status: "calling",
+      }) as ToolEvent;
       const result = await this.invokeTool(tool, fnName, fnArgs);
-
+      yield createEvent("tool", {
+        toolCallId,
+        toolName: tool.name,
+        functionName: fnName,
+        functionArgs: fnArgs,
+        functionResult: result,
+        status: "called",
+      }) as ToolEvent;
       const toolMessages: LLMMessage[] = [];
       toolMessages.push({
         role: "tool",
