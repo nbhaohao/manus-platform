@@ -21,6 +21,7 @@ import {
 import { Memory } from "../../domain/memory.ts";
 import { addToMemory } from "../memory.ts";
 import { parseJSON } from "../../infra/jsonParser.ts";
+import { parse } from "hono/utils/cookie";
 
 // 已就位（AI 生成）：m03 只需 agent 消费工具的最小契约；m04 建完整工具系统（domain/tool.ts：注册表/自描述 schema）
 // 对标 base.py 用到的 BaseTool 成员：name / get_tools / has_tool / invoke
@@ -182,7 +183,23 @@ export class BaseAgent {
     for (; i < this.config.maxIterations; i++) {
       const tcs = message.tool_calls as LLMToolCall[] | undefined;
       if (!tcs || tcs.length === 0) break; // 终态：LLM 给了文本答案
+      const tc = tcs[0];
+      if (!tc.function) continue;
+      const toolCallId = tc.id || randomUUID();
+      const fnName = tc.function.name;
+      const fnArgs = (await parseJSON(tc.function.arguments, {})) as Record<
+        string,
+        unknown
+      >;
+      const tool = this.getTool(fnName);
+      const result = await this.invokeTool(tool, fnName, fnArgs);
+
       const toolMessages: LLMMessage[] = [];
+      toolMessages.push({
+        role: "tool",
+        tool_call_id: toolCallId,
+        content: JSON.stringify(result),
+      });
       // —— 本关(stage 1)循环体先留空 —— 工具执行 + 事件产出留到 stage 4/5（见各关卡页）
       message = await this.invokeLlm(toolMessages, fmt); // 带工具结果再问，进入下一轮
     }
