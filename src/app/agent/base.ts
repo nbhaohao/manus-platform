@@ -129,7 +129,7 @@ export class BaseAgent {
           filtered.reasoning_content = resp.reasoning_content;
         }
         if (resp.tool_calls?.length) {
-          filtered.tool_calls = resp.tool_calls;
+          filtered.tool_calls = resp.tool_calls.slice(0, 1);
         }
         await addToMemory(this.memory, [filtered], this.systemPrompt);
         return filtered;
