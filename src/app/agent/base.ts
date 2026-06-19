@@ -94,7 +94,51 @@ export class BaseAgent {
     //      } catch (e) { lastErr = String(e); continue }
     //    }
     // 3. 重试耗尽 → throw new Error(`...已达最大重试次数(${this.config.maxRetries})...`)
-    throw new Error("TODO: stage 2");
+    await addToMemory(this.memory, messages, this.systemPrompt);
+    let lastErr: string | undefined;
+    for (let i = 0; i < this.config.maxRetries; i++) {
+      try {
+        const resp = await this.llm.invoke(
+          this.memory.getMessages(),
+          this.getAvailableTools(),
+          format,
+          this.toolChoice,
+        );
+        if (!resp.content && !resp.tool_calls) {
+          await addToMemory(
+            this.memory,
+            [
+              {
+                role: "assistant",
+                content: "",
+              },
+              {
+                role: "user",
+                content: "AI 无响应内容，请继续。",
+              },
+            ],
+            this.systemPrompt,
+          );
+          continue;
+        }
+        const filtered: LLMMessage = {
+          role: "assistant",
+          content: resp.content,
+        };
+        if (resp.reasoning_content) {
+          filtered.reasoning_content = resp.reasoning_content;
+        }
+        if (resp.tool_calls?.length) {
+          filtered.tool_calls = resp.tool_calls;
+        }
+        await addToMemory(this.memory, [filtered], this.systemPrompt);
+        return filtered;
+      } catch (e) {
+        lastErr = String(e);
+        continue;
+      }
+    }
+    throw new Error(`...已达最大重试次数(${this.config.maxRetries})...`);
   }
 
   // ── stage 6 · roll_back ───────────────────────────────────────────────────
