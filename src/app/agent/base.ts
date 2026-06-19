@@ -144,17 +144,19 @@ export class BaseAgent {
 
   // ── stage 6 · roll_back ───────────────────────────────────────────────────
   async rollBack(askUserResponse = ""): Promise<void> {
-    // TODO: stage 6 —— 状态修正，保证 memory 不残留「半执行」的 tool_calls
-    // 1. const last = this.memory.getLastMessage()
-    //    const toolCalls = last?.tool_calls as LLMToolCall[] | undefined
-    //    if (!last || !toolCalls || toolCalls.length === 0) return   // 末条非 tool_calls → 不动
-    // 2. const tc = toolCalls[0]
-    //    if (tc.function?.name === 'message_ask_user')
-    //      → this.memory.addMessage({ role:'tool', tool_call_id: tc.id, content: askUserResponse })
-    //        （特判：不回滚，把用户答复回填成 tool 结果）
-    //    else
-    //      → this.memory.rollBack()   // 普通工具调用被中断，直接删这条
-    throw new Error("TODO: stage 6");
+    const last = this.memory.getLastMessage();
+    const toolCalls = last?.tool_calls as LLMToolCall[] | undefined;
+    if (!last || !toolCalls || toolCalls.length === 0) return;
+    const tc = toolCalls[0];
+    if (tc.function?.name === "message_ask_user") {
+      this.memory.addMessage({
+        role: "tool",
+        tool_call_id: tc.id,
+        content: askUserResponse,
+      });
+      return;
+    }
+    this.memory.rollBack();
   }
 
   // ── stage 1/4/5 · invoke 主循环 ───────────────────────────────────────────
