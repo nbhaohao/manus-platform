@@ -3,7 +3,12 @@
 // 精简：m03 无 DB（记忆走 m02 in-mem addToMemory，无 saveHook）、工具系统留到 m04（这里只声明 agent 消费工具的最小契约）
 
 import { randomUUID } from "crypto";
-import type { LLMMessage, LLMPort, LLMTool, LLMToolCall } from "../../ports/llm.ts";
+import type {
+  LLMMessage,
+  LLMPort,
+  LLMTool,
+  LLMToolCall,
+} from "../../ports/llm.ts";
 import type { AgentConfig } from "../../domain/models/appConfig.ts";
 import type { ToolResult } from "../../domain/models/toolResult.ts";
 import {
@@ -127,6 +132,33 @@ export class BaseAgent {
     //
     // 提示：stage 1 只搭循环控制——循环体先留空（toolMessages=[] + 再次 invokeLlm），
     //       「终态」「最大迭代」两条断言即可变绿；工具执行/事件留到 stage 4/5。
-    throw new Error("TODO: stage 1");
+    const fmt = format ?? this.format;
+    let message = await this.invokeLlm([{ role: "user", content: query }], fmt);
+    let i = 0;
+    for (; i < this.config.maxIterations; i++) {
+      const tcs = message.tool_calls as LLMToolCall[] | undefined;
+      if (!tcs || tcs.length === 0) break; // 终态：LLM 给了文本答案
+      const toolMessages: LLMMessage[] = [];
+      // —— 本关(stage 1)循环体先留空 —— 工具执行 + 事件产出留到 stage 4/5（见各关卡页）
+      message = await this.invokeLlm(toolMessages, fmt); // 带工具结果再问，进入下一轮
+    }
+    const remainingToolCalls = message.tool_calls as LLMToolCall[] | undefined;
+    if (remainingToolCalls && remainingToolCalls.length > 0) {
+      yield createEvent("error", {
+        error: `已达最大次数(${this.config.maxIterations})，仍在调用工具`,
+      }) as ErrorEvent;
+      return;
+    }
+    if (message.content != null) {
+      yield createEvent("message", {
+        role: "assistant",
+        message: message.content,
+        attachments: [],
+      }) as MessageEvent;
+    } else {
+      yield createEvent("error", {
+        error: "Agent 未能生成有效回复内容",
+      }) as ErrorEvent;
+    }
   }
 }
