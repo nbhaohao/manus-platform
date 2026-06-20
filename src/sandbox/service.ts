@@ -3,10 +3,7 @@
 //   把请求经 ContainerRuntime（docker exec）转交给 stock 容器执行。
 //   砍掉 session 化 shell（read/wait/kill），只留一次性 exec-command。
 import { Hono } from "hono";
-import type {
-  ContainerRuntime,
-  Container,
-} from "../ports/containerRuntime.ts";
+import type { ContainerRuntime, Container } from "../ports/containerRuntime.ts";
 
 export interface SandboxServiceDeps {
   runtime: ContainerRuntime;
@@ -20,21 +17,22 @@ export function createSandboxApp(deps: SandboxServiceDeps) {
 
   // 懒创建：第一次请求才起容器，之后复用同一个（容器创建慢，别每次 new）。
   async function ensure(): Promise<Container> {
-    // TODO: stage 2
-    // if (!container) container = await deps.runtime.create(deps.image)
-    // return container
-    throw new Error("TODO: stage 2 — ensure 未实现");
+    if (!container) {
+      container = await deps.runtime.create(deps.image);
+    }
+    return container;
   }
 
   // POST /shell/exec-command  body: { command, execDir? }
   //   → 容器内 exec，回 { success: exitCode===0, data: { stdout, stderr, exitCode } }
   app.post("/shell/exec-command", async (c) => {
     // TODO: stage 2
-    // 1. const body = (await c.req.json()) as { command?: string; execDir?: string }
-    // 2. const box = await ensure()
-    // 3. const r = await deps.runtime.exec(box, String(body.command ?? ""), { cwd: body.execDir })
-    // 4. return c.json({ success: r.exitCode === 0, data: r })
-    throw new Error("TODO: stage 2 — /shell/exec-command 未实现");
+    const body = (await c.req.json()) as { command?: string; execDir?: string };
+    const box = await ensure();
+    const r = await deps.runtime.exec(box, String(body.command ?? ""), {
+      cwd: body.execDir,
+    });
+    return c.json({ success: r.exitCode === 0, data: r });
   });
 
   return app;
