@@ -15,6 +15,10 @@ export async function probeShellEscape(
   localShell: Tool,
   hostPath: string,
 ): Promise<EscapeReport> {
+  const res = await localShell.execute({ command: "cat " + hostPath });
+  const out = String((res.data as { stdout?: string })?.stdout ?? "");
+  const escaped = res.success && out.trim().length > 0;
+  return { escaped, evidence: out.slice(0, 80) };
   // TODO: stage 1
   // 1. 用本地 shell 工具跑 `cat <hostPath>`：
   //      const res = await localShell.execute({ command: 'cat ' + hostPath })
@@ -23,5 +27,4 @@ export async function probeShellEscape(
   // 3. 判定是否越狱：命令成功且读到了非空内容
   //      const escaped = res.success && out.trim().length > 0
   // 4. return { escaped, evidence: out.slice(0, 80) }
-  throw new Error("TODO: stage 1 — probeShellEscape 未实现");
 }
