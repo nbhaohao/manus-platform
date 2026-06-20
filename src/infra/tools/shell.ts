@@ -11,15 +11,25 @@ export function createShellTool(cwd?: string): Tool {
   return {
     name: "shell_exec",
     description: "在本机执行一条 shell 命令并返回输出。",
-    parameters: { command: { type: "string", description: "要执行的 shell 命令" } },
+    parameters: {
+      command: { type: "string", description: "要执行的 shell 命令" },
+    },
     required: ["command"],
     async execute(args) {
-      // 1. const command = String(args.command ?? "")
-      // 2. try { const { stdout, stderr } = await execAsync(command, { cwd, timeout: 30000 })
-      //         return { success:true, message:"执行完成", data:{ stdout, stderr } } }
-      // 3. catch (e) { 非零退出 → { success:false, message:e.message, data:{ stdout, stderr, code } } }
-      //    （execAsync = promisify(exec)，命令非零退出会 reject）
-      throw new Error("TODO: stage 5 — shell_exec");
+      try {
+        const command = String(args.command ?? "");
+        const { stdout, stderr } = await execAsync(command, {
+          cwd,
+          timeout: 30000,
+        });
+        return {
+          success: true,
+          message: "执行完成",
+          data: { stdout, stderr },
+        };
+      } catch (e) {
+        return { success: false, message: String(e) };
+      }
     },
   };
 }
