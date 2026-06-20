@@ -1,7 +1,15 @@
 // 已就位（AI 生成）
 // Source: materials/mooc-manus/api/app/domain/external/browser.py
+// m07 扩充：InteractiveElement + Playwright 最小化接口（测试替身用，不依赖真实 playwright 包）
 
 import type { ToolResult } from '../domain/models/toolResult.ts'
+
+// JS 注入后 page.evaluate 返回的可交互元素条目
+export interface InteractiveElement {
+  index: number;
+  tag: string;
+  text: string;
+}
 
 export interface BrowserPort {
   viewPage(): Promise<ToolResult>
@@ -17,4 +25,40 @@ export interface BrowserPort {
   screenshot(fullPage?: boolean): Promise<Buffer>
   consoleExec(javascript: string): Promise<ToolResult>
   consoleView(maxLines?: number): Promise<ToolResult>
+  cleanup(): Promise<void>
+}
+
+// ── Playwright 最小化接口（测试替身；生产走 dynamic import("playwright")）──────
+
+export interface ElementLike {
+  click(opts?: { timeout?: number }): Promise<void>;
+  fill(text: string): Promise<void>;
+  type(text: string): Promise<void>;
+}
+
+export interface PageLike {
+  url: string;
+  evaluate(fn: string): Promise<unknown>;
+  goto(url: string, opts?: Record<string, unknown>): Promise<unknown>;
+  screenshot(opts?: { type?: string; fullPage?: boolean }): Promise<Buffer>;
+  close(): Promise<void>;
+  querySelector(sel: string): Promise<ElementLike | null>;
+  mouse: { click(x: number, y: number): Promise<void> };
+  keyboard: { press(key: string): Promise<void>; type(text: string): Promise<void> };
+}
+
+export interface ContextLike {
+  pages: PageLike[];
+  newPage(): Promise<PageLike>;
+}
+
+export interface BrowserLike {
+  contexts: ContextLike[];
+  close(): Promise<void>;
+}
+
+export interface PlaywrightAPI {
+  chromium: {
+    connect_over_cdp(url: string): Promise<BrowserLike>;
+  };
 }
