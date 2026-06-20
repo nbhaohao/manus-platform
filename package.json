@@ -7,7 +7,7 @@
     "verify": "vitest run tests/m06.test.ts",
     "v": "vitest run -t",
     "start": "tsx src/main.ts",
-    "agent": "tsx src/cli.ts",
+    "agent": "tsx --env-file .env src/cli.ts",
     "e2e:m03": "tsx scripts/e2e_m03.ts",
     "e2e:m04": "tsx scripts/e2e_m04.ts",
     "e2e:m06": "tsx scripts/e2e_m06.ts"
