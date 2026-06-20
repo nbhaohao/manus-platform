@@ -14,11 +14,8 @@ export function createSandboxShellTool(sandbox: SandboxPort): Tool {
     },
     required: ["command"],
     async execute(args) {
-      // TODO: stage 5
-      // 1. const command = String(args.command ?? "")
-      // 2. return await sandbox.execCommand("", "", command)
-      //    —— 不再用本机 exec；命令进容器，隔离就成立了。
-      throw new Error("TODO: stage 5 — sandbox shell execute 未实现");
+      const command = String(args.command ?? "");
+      return await sandbox.execCommand("", "", command);
     },
   };
 }
