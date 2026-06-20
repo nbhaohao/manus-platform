@@ -103,23 +103,23 @@ describe("stage 1 · launchChromium", () => {
   });
 });
 
-// ── stage 2 · connect_over_cdp + retry ───────────────────────────────────────
+// ── stage 2 · connectOverCDP + retry ───────────────────────────────────────
 
-describe("stage 2 · connect_over_cdp + retry", () => {
+describe("stage 2 · connectOverCDP + retry", () => {
   it("CDP 成功连上时 isConnected() 返回 true", async () => {
     const page = fakePage();
     const fakePw: PlaywrightAPI = {
-      chromium: { async connect_over_cdp() { return fakeBrowserLike(page); } },
+      chromium: { async connectOverCDP() { return fakeBrowserLike(page); } },
     };
     const pb = new PlaywrightBrowser("http://localhost:9222", fakePw);
     await pb.connect();
     expect(pb.isConnected()).toBe(true);
   });
 
-  it("connect_over_cdp 一直失败时，重试 maxRetries 次后抛错", async () => {
+  it("connectOverCDP 一直失败时，重试 maxRetries 次后抛错", async () => {
     let attempts = 0;
     const fakePw: PlaywrightAPI = {
-      chromium: { async connect_over_cdp() { attempts++; throw new Error("ECONNREFUSED"); } },
+      chromium: { async connectOverCDP() { attempts++; throw new Error("ECONNREFUSED"); } },
     };
     const pb = new PlaywrightBrowser("http://localhost:9222", fakePw, { maxRetries: 3, retryDelay: 0 });
     await expect(pb.connect()).rejects.toThrow();

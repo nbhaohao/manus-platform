@@ -22,7 +22,7 @@ try {
   process.exit(1);
 }
 
-// 本地起一个 chromium server，再用 connect_over_cdp 连上去（模拟容器 CDP 流程）
+// 本地起一个 chromium server，再用 connectOverCDP 连上去（模拟容器 CDP 流程）
 const server = await chromium.launchServer();
 const wsEndpoint = server.wsEndpoint();
 console.log("Chromium server:", wsEndpoint);
@@ -35,7 +35,7 @@ const pw = { chromium: (mod as Record<string, { connectOverCDP?(url: string): Pr
 // 对于 e2e：直接注入 playwright 对象，连接本地 server
 import("playwright").then(async (m) => {
   const realPw = m as unknown as import("../src/ports/browser.ts").PlaywrightAPI;
-  // connect_over_cdp 需要 HTTP CDP URL，launchServer 给的是 WS，这里 workaround：
+  // connectOverCDP 需要 HTTP CDP URL，launchServer 给的是 WS，这里 workaround：
   // 用 chromium.connect(wsEndpoint) 替代
   // 实际容器场景用 http://localhost:9222
   console.log("\n注: 完整 CDP 测试需要 Docker 容器 + chromium headless");

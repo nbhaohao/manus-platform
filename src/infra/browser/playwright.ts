@@ -55,7 +55,7 @@ export class PlaywrightBrowser implements BrowserPort {
     return this._pw;
   }
 
-  // ── stage 2 · connect_over_cdp + 指数退避重试 ───────────────────────────────
+  // ── stage 2 · connectOverCDP + 指数退避重试 ───────────────────────────────
   // Source: playwright_browser.py:196-240 (initialize)
   //
   // Chromium 刚收到启动命令不会立刻监听 CDP 端口（需要几百毫秒）。
@@ -69,7 +69,7 @@ export class PlaywrightBrowser implements BrowserPort {
     // let lastErr: unknown
     // for (let i = 0; i < maxRetries; i++) {
     //   try {
-    //     this._browser = await pw.chromium.connect_over_cdp(this.cdpUrl)
+    //     this._browser = await pw.chromium.connectOverCDP(this.cdpUrl)
     //     const ctx: ContextLike = this._browser.contexts[0]
     //     this._page = ctx?.pages[0] ?? await ctx?.newPage()
     //     return   ← 成功就立刻返回

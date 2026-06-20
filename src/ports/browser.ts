@@ -59,6 +59,6 @@ export interface BrowserLike {
 
 export interface PlaywrightAPI {
   chromium: {
-    connect_over_cdp(url: string): Promise<BrowserLike>;
+    connectOverCDP(url: string): Promise<BrowserLike>;
   };
 }
