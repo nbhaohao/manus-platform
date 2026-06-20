@@ -23,8 +23,19 @@ export interface Tool {
 
 // 把 Tool 转成 OpenAI function schema（对标 base.py @tool 拼出的 tool_schema）
 export function toParam(tool: Tool): LLMTool {
+  return {
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: {
+        type: "object",
+        properties: tool.parameters,
+        required: tool.required,
+      },
+    },
+  };
   // 1. 返回 { type:"function", function:{ name, description, parameters } }
   // 2. 其中 parameters = { type:"object", properties: tool.parameters, required: tool.required }
   //    这正是 base.py 里 @tool 装饰器拼出来的 tool_schema 的 TS 版
-  throw new Error("TODO: stage 1 — 实现 toParam");
 }
