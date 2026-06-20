@@ -26,11 +26,18 @@ export class ToolRegistry implements AgentTool {
     name: string,
     args: Record<string, unknown>,
   ): Promise<ToolResult> {
-    // 1. 按 name 找 tool；找不到 → return { success:false, message:`工具[${name}]未找到` }
-    // 2. 防幻觉过滤：只保留 tool.parameters 声明过的键（LLM 可能塞多余参数）
-    //    const allowed = new Set(Object.keys(tool.parameters)); 逐个筛 args
-    // 3. try { return await tool.execute(filtered) }
-    //    catch (e) { return { success:false, message:String(e) } }  // 工具报错不抛出，包成失败 ToolResult
-    throw new Error("TODO: stage 3 — invoke 分发");
+    if (!this.hasTool(name)) {
+      return { success: false, message: `工具[${name}]未找到` };
+    }
+    const tool = this.tools.find((t) => t.name === name)!;
+    const allowed = new Set(Object.keys(tool.parameters));
+    const filtered = Object.fromEntries(
+      Object.entries(args).filter(([k]) => allowed.has(k)),
+    );
+    try {
+      return await tool.execute(filtered);
+    } catch (e) {
+      return { success: false, message: String(e) };
+    }
   }
 }
