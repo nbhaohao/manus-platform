@@ -1,6 +1,7 @@
 node_modules/
 .env
 runs/
+workspace/
 dist/
 .idea
 *.log
