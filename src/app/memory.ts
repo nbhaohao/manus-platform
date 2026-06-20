@@ -11,10 +11,6 @@ export async function addToMemory(
   systemPrompt: string,
   saveHook?: (m: Memory) => Promise<void>,
 ): Promise<void> {
-  // TODO: stage 4
-  // 1. if (memory.empty) → memory.addMessage({ role: 'system', content: systemPrompt })
-  // 2. memory.addMessages(messages)
-  // 3. if (saveHook) → await saveHook(memory)
   if (memory.empty) {
     memory.addMessage({
       role: "system",
@@ -30,14 +26,17 @@ export async function addToMemory(
 
 // ── stage 6 核心：把 repo.saveMemory(sessionId, agentName, memory) 包成 1-arg hook ─
 type MemoryRepo = {
-  saveMemory(sessionId: string, agentName: string, memory: Memory): Promise<void>
-}
+  saveMemory(
+    sessionId: string,
+    agentName: string,
+    memory: Memory,
+  ): Promise<void>;
+};
 
 export function makeMemorySaveHook(
   repo: MemoryRepo,
   sessionId: string,
   agentName: string,
 ): (memory: Memory) => Promise<void> {
-  // TODO: stage 6 — return (mem) => repo.saveMemory(sessionId, agentName, mem)
-  throw new Error('TODO: stage 6 — makeMemorySaveHook')
+  return (memory: Memory) => repo.saveMemory(sessionId, agentName, memory);
 }
