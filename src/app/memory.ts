@@ -1,5 +1,6 @@
-// Source: materials/mooc-manus/api/app/domain/services/agents/base.py:_add_to_memory
-// 独立函数：首次注入 system prompt，后续追加，可选持久化 hook（m05 传 repo.save）
+// Source: materials/mooc-manus/api/app/domain/services/agents/base.py:_add_to_memory / _ensure_memory
+// addToMemory：首次注入 system prompt，后续追加，可选持久化 hook（m05 传 makeMemorySaveHook）
+// makeMemorySaveHook（m05 新增）：把 3 参 repo.saveMemory 偏应用为 1 参 saveHook
 
 import type { LLMMessage } from "../ports/llm.ts";
 import { Memory } from "../domain/memory.ts";
@@ -25,4 +26,18 @@ export async function addToMemory(
   if (saveHook) {
     await saveHook(memory);
   }
+}
+
+// ── stage 6 核心：把 repo.saveMemory(sessionId, agentName, memory) 包成 1-arg hook ─
+type MemoryRepo = {
+  saveMemory(sessionId: string, agentName: string, memory: Memory): Promise<void>
+}
+
+export function makeMemorySaveHook(
+  repo: MemoryRepo,
+  sessionId: string,
+  agentName: string,
+): (memory: Memory) => Promise<void> {
+  // TODO: stage 6 — return (mem) => repo.saveMemory(sessionId, agentName, mem)
+  throw new Error('TODO: stage 6 — makeMemorySaveHook')
 }
