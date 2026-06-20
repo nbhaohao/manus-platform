@@ -11,19 +11,29 @@ export function createSearchTool(engine: SearchEnginePort): Tool {
     parameters: {
       query: {
         type: "string",
-        description: "搜索查询，提取核心关键词（3-5 个），别用整句自然语言问句。",
+        description:
+          "搜索查询，提取核心关键词（3-5 个），别用整句自然语言问句。",
       },
       date_range: {
         type: "string",
-        enum: ["all", "past_hour", "past_day", "past_week", "past_month", "past_year"],
+        enum: [
+          "all",
+          "past_hour",
+          "past_day",
+          "past_week",
+          "past_month",
+          "past_year",
+        ],
         description: "（可选）时间范围过滤，默认 all。",
       },
     },
     required: ["query"],
     async execute(args) {
       // 工具不自己搜索，委托给注入的 engine 端口：
-      // return engine.invoke(String(args.query ?? ""), args.date_range as string | undefined)
-      throw new Error("TODO: stage 6 — search_web 委托给 engine 端口");
+      return engine.invoke(
+        String(args.query ?? ""),
+        args.date_range as string | undefined,
+      );
     },
   };
 }
