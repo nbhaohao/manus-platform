@@ -4,20 +4,23 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "verify": "vitest run tests/m05.test.ts",
+    "verify": "vitest run tests/m06.test.ts",
     "v": "vitest run -t",
     "start": "tsx src/main.ts",
     "agent": "tsx src/cli.ts",
     "e2e:m03": "tsx scripts/e2e_m03.ts",
-    "e2e:m04": "tsx scripts/e2e_m04.ts"
+    "e2e:m04": "tsx scripts/e2e_m04.ts",
+    "e2e:m06": "tsx scripts/e2e_m06.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.5",
+    "dockerode": "^4.0.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.7.0",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
+    "@types/dockerode": "^3.3.31",
     "@types/node": "^24.0.0",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.19.0",
