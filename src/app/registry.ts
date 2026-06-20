@@ -13,12 +13,12 @@ export class ToolRegistry implements AgentTool {
   // ── stage 2 · schema 聚合 ──
   getTools(): LLMTool[] {
     // 把每个 tool 经 toParam 转成 LLMTool 列表（this.tools.map(toParam)）
-    throw new Error("TODO: stage 2 — getTools 聚合 schema");
+    return this.tools.map(toParam);
   }
 
   hasTool(name: string): boolean {
     // this.tools 里是否存在 t.name === name
-    throw new Error("TODO: stage 2 — hasTool");
+    return this.tools.some((t) => t.name === name);
   }
 
   // ── stage 3 · 按名分发 → 统一 ToolResult ──
