@@ -8,6 +8,8 @@
 //   pnpm agent              本机工具（file/shell 直接落本机 workspace/）
 //   pnpm agent --sandbox    沙箱工具（m06：file/shell 进 Docker 容器，亲眼看命令进容器）
 //                           需本机有 Docker；镜像默认 python:3.12-slim（SANDBOX_IMAGE 可改）
+//   pnpm agent --plan       m08 plan-and-execute：PlannerReActFlow 先规划再逐步执行
+//                           （本机工具；亲眼看 plan/step/done 事件流）
 // 退出：  exit / quit / Ctrl-D
 import { createInterface } from "node:readline/promises";
 import { mkdir } from "node:fs/promises";
@@ -32,6 +34,10 @@ import { withContainer } from "./infra/sandbox/docker.ts";
 import { RuntimeSandbox } from "./infra/sandbox/runtimeSandbox.ts";
 import { createSandboxShellTool } from "./infra/tools/sandboxShell.ts";
 import { createSandboxFileTools } from "./infra/tools/sandboxFile.ts";
+
+// m08 plan-and-execute 编排
+import { PlannerReActFlow } from "./app/flows/plannerReact.ts";
+import type { Event } from "./domain/models/event.ts";
 
 // ── 极简 ANSI 上色（不引依赖）──────────────────────────────────────────────
 const c = {
@@ -129,8 +135,98 @@ async function runSession(
   console.log(c.dim("\n  再见 👋\n"));
 }
 
+// m08：plan-and-execute REPL —— 跑 PlannerReActFlow，按事件类型分别上色打印。
+async function runFlowSession(
+  config: AppConfig,
+  registry: ToolRegistry,
+  where: string,
+) {
+  const llm = new OpenAICompatLLM(config.llm);
+
+  console.log(c.bold("\n  manus-platform · Planner+ReAct Flow CLI"));
+  console.log(c.dim("  ─────────────────────────────────────────"));
+  console.log(`  模型    ${c.cyan(config.llm.modelName)}  @ ${config.llm.baseUrl}`);
+  console.log(`  工具    ${registry.getTools().map((t) => t.function.name).join(", ")}`);
+  console.log(`  执行    ${where}`);
+  if (!config.llm.apiKey) {
+    console.log(c.yellow("  ⚠ 未配置 LLM_API_KEY —— 真正发起对话会失败。"));
+  }
+  console.log(c.dim("  输入任务回车；先规划再逐步执行。exit / Ctrl-D 退出。\n"));
+
+  const rl = createInterface({ input: stdin, output: stdout });
+  while (true) {
+    let query: string;
+    try {
+      query = (await rl.question(c.bold("> "))).trim();
+    } catch {
+      break;
+    }
+    if (!query) continue;
+    if (query === "exit" || query === "quit") break;
+
+    // 每个任务一个新 flow（独立 planner/react 记忆）
+    const flow = new PlannerReActFlow(llm, config.agent, [registry]);
+    try {
+      for await (const ev of flow.invoke(query) as AsyncGenerator<Event>) {
+        if (ev.type === "title") {
+          console.log(c.bold(`\n  📋 ${ev.title}`));
+        } else if (ev.type === "plan") {
+          if (ev.status === "created") {
+            console.log(c.cyan(`  计划 ${ev.plan.steps.length} 步：`));
+            ev.plan.steps.forEach((s, i) =>
+              console.log(c.dim(`    ${i + 1}. ${s.description}`)),
+            );
+          } else if (ev.status === "completed") {
+            console.log(c.green("  ✓ 计划完成"));
+          } else {
+            console.log(c.dim("  ↻ 重规划剩余步骤"));
+          }
+        } else if (ev.type === "step") {
+          if (ev.status === "started") {
+            console.log(c.cyan(`  ▶ 执行：${truncate(ev.step.description, 80)}`));
+          } else if (ev.status === "failed") {
+            console.log(c.red(`    ✗ 步骤失败：${truncate(ev.step.error || "", 120)}`));
+          }
+        } else if (ev.type === "tool") {
+          if (ev.status === "calling") {
+            console.log(
+              c.cyan(`    🔧 ${ev.functionName}`) +
+                c.dim(`(${truncate(JSON.stringify(ev.functionArgs), 100)})`),
+            );
+          } else {
+            console.log(`       ↳ ${fmtResult(ev.functionResult as ToolResult)}`);
+          }
+        } else if (ev.type === "message") {
+          console.log(`\n  💬 ${ev.message}\n`);
+        } else if (ev.type === "error") {
+          console.log(c.red(`\n  ⚠ ${ev.error}\n`));
+        } else if (ev.type === "done") {
+          console.log(c.dim("  🏁 任务结束\n"));
+        }
+      }
+    } catch (e) {
+      console.log(c.red(`\n  ✗ 运行出错：${String(e)}\n`));
+    }
+  }
+  rl.close();
+  console.log(c.dim("\n  再见 👋\n"));
+}
+
 async function main() {
   const config = loadConfig();
+
+  if (process.argv.includes("--plan")) {
+    // m08 plan-and-execute 模式：本机工具 + PlannerReActFlow
+    const workspace = fileURLToPath(new URL("../workspace", import.meta.url));
+    await mkdir(workspace, { recursive: true });
+    const registry = new ToolRegistry([
+      ...createFileTools(workspace),
+      createShellTool(workspace),
+      createSearchTool(new EchoSearchEngine()),
+    ]);
+    await runFlowSession(config, registry, `本机 workspace/  ${workspace}`);
+    return;
+  }
 
   if (process.argv.includes("--sandbox")) {
     // m06 沙箱模式：起一个 Docker 容器，file/shell 工具都进容器跑。
