@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "verify": "vitest run tests/m07.test.ts",
+    "verify": "vitest run tests/m08.test.ts",
     "v": "vitest run -t",
     "start": "tsx src/main.ts",
     "agent": "tsx --env-file .env src/cli.ts",
