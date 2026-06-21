@@ -19,7 +19,9 @@ import { GET_INTERACTIVE_ELEMENTS_FUNC } from "./elementFuncs.ts";
 // 注入 GET_INTERACTIVE_ELEMENTS_FUNC JS，给每个可交互元素打 data-manus-id 属性，
 // 返回格式化列表如 ["0:<button>Submit</button>", "1:<a>Home</a>"]。
 // LLM 看内容理解意图，用 index 数字下令点击（click_by_index），不用猜 CSS 选择器。
-export async function _extractInteractiveElements(page: PageLike): Promise<string[]> {
+export async function _extractInteractiveElements(
+  page: PageLike,
+): Promise<string[]> {
   // TODO: stage 3
   // 1. const raw = await page.evaluate(GET_INTERACTIVE_ELEMENTS_FUNC) as InteractiveElement[]
   // 2. return raw.map(e => e.index + ":<" + e.tag + ">" + e.text + "</" + e.tag + ">")
@@ -62,24 +64,23 @@ export class PlaywrightBrowser implements BrowserPort {
   // 不能用 await 等「命令返回」——launchChromium 发的是后台命令（&）。
   // 解法：主动重试轮询，指数退避避免在 Chromium 未就绪时密集请求。
   async connect(): Promise<void> {
-    // TODO: stage 2
-    // const pw = await this._getPlaywright()
-    // const maxRetries = this.opts.maxRetries ?? 5
-    // const baseDelay = this.opts.retryDelay ?? 1000
-    // let lastErr: unknown
-    // for (let i = 0; i < maxRetries; i++) {
-    //   try {
-    //     this._browser = await pw.chromium.connectOverCDP(this.cdpUrl)
-    //     const ctx: ContextLike = this._browser.contexts[0]
-    //     this._page = ctx?.pages[0] ?? await ctx?.newPage()
-    //     return   ← 成功就立刻返回
-    //   } catch (e) {
-    //     lastErr = e
-    //     if (i < maxRetries - 1) await new Promise(r => setTimeout(r, baseDelay * Math.pow(2, i)))
-    //   }
-    // }
-    // throw lastErr
-    throw new Error("TODO: stage 2 — connect 未实现");
+    const pw = await this._getPlaywright();
+    const maxRetries = this.opts.maxRetries ?? 5;
+    const baseDelay = this.opts.retryDelay ?? 1000;
+    let lastErr: unknown;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        this._browser = await pw.chromium.connectOverCDP(this.cdpUrl);
+        const ctx: ContextLike = this._browser.contexts[0];
+        this._page = ctx?.pages[0] ?? (await ctx?.newPage());
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (i < maxRetries - 1)
+          await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, i)));
+      }
+    }
+    throw lastErr;
   }
 
   isConnected(): boolean {
@@ -92,7 +93,11 @@ export class PlaywrightBrowser implements BrowserPort {
     if (!this._page) return { success: false, message: "未连接" };
     try {
       const elements = await _extractInteractiveElements(this._page);
-      return { success: true, message: "查看成功", data: { interactive_elements: elements } };
+      return {
+        success: true,
+        message: "查看成功",
+        data: { interactive_elements: elements },
+      };
     } catch (e) {
       return { success: false, message: "viewPage 失败: " + String(e) };
     }
@@ -101,9 +106,16 @@ export class PlaywrightBrowser implements BrowserPort {
   async navigate(url: string): Promise<ToolResult> {
     if (!this._page) return { success: false, message: "未连接" };
     try {
-      await this._page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await this._page.goto(url, {
+        waitUntil: "domcontentloaded",
+        timeout: 30000,
+      });
       const elements = await _extractInteractiveElements(this._page);
-      return { success: true, message: "导航成功", data: { url, interactive_elements: elements } };
+      return {
+        success: true,
+        message: "导航成功",
+        data: { url, interactive_elements: elements },
+      };
     } catch (e) {
       return { success: false, message: "导航失败: " + String(e) };
     }
@@ -113,13 +125,22 @@ export class PlaywrightBrowser implements BrowserPort {
     return this.navigate(url);
   }
 
-  async click(options: { index?: number; x?: number; y?: number }): Promise<ToolResult> {
+  async click(options: {
+    index?: number;
+    x?: number;
+    y?: number;
+  }): Promise<ToolResult> {
     if (!this._page) return { success: false, message: "未连接" };
     try {
       if (options.index !== undefined) {
-        const selector = '[data-manus-id="manus-element-' + options.index + '"]';
+        const selector =
+          '[data-manus-id="manus-element-' + options.index + '"]';
         const el: ElementLike | null = await this._page.querySelector(selector);
-        if (!el) return { success: false, message: "元素 " + options.index + " 不存在" };
+        if (!el)
+          return {
+            success: false,
+            message: "元素 " + options.index + " 不存在",
+          };
         await el.click({ timeout: 5000 });
       } else if (options.x !== undefined && options.y !== undefined) {
         await this._page.mouse.click(options.x, options.y);
@@ -130,13 +151,22 @@ export class PlaywrightBrowser implements BrowserPort {
     }
   }
 
-  async input(options: { text: string; pressEnter: boolean; index?: number }): Promise<ToolResult> {
+  async input(options: {
+    text: string;
+    pressEnter: boolean;
+    index?: number;
+  }): Promise<ToolResult> {
     if (!this._page) return { success: false, message: "未连接" };
     try {
       if (options.index !== undefined) {
-        const selector = '[data-manus-id="manus-element-' + options.index + '"]';
+        const selector =
+          '[data-manus-id="manus-element-' + options.index + '"]';
         const el: ElementLike | null = await this._page.querySelector(selector);
-        if (!el) return { success: false, message: "元素 " + options.index + " 不存在" };
+        if (!el)
+          return {
+            success: false,
+            message: "元素 " + options.index + " 不存在",
+          };
         await el.fill(options.text);
       }
       if (options.pressEnter) await this._page.keyboard.press("Enter");
