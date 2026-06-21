@@ -22,10 +22,12 @@ import { GET_INTERACTIVE_ELEMENTS_FUNC } from "./elementFuncs.ts";
 export async function _extractInteractiveElements(
   page: PageLike,
 ): Promise<string[]> {
-  // TODO: stage 3
-  // 1. const raw = await page.evaluate(GET_INTERACTIVE_ELEMENTS_FUNC) as InteractiveElement[]
-  // 2. return raw.map(e => e.index + ":<" + e.tag + ">" + e.text + "</" + e.tag + ">")
-  throw new Error("TODO: stage 3 — _extractInteractiveElements 未实现");
+  const raw = (await page.evaluate(
+    GET_INTERACTIVE_ELEMENTS_FUNC,
+  )) as InteractiveElement[];
+  return raw.map(
+    (e) => e.index + ":<" + e.tag + ">" + e.text + "</" + e.tag + ">",
+  );
 }
 
 // ── PlaywrightBrowser ──────────────────────────────────────────────────────────
