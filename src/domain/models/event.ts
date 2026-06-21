@@ -2,6 +2,7 @@
 // Source: materials/mooc-manus/api/app/domain/models/event.py
 
 import { randomUUID } from "crypto";
+import type { Plan, Step } from "../plan.ts"; // m08：Plan/Step 事件携带领域对象
 
 export type EventType =
   | "message"
@@ -51,13 +52,20 @@ export interface WaitEvent extends BaseEvent {
 
 export interface PlanEvent extends BaseEvent {
   type: "plan";
-  plan: unknown; // m08 会替换为 Plan 类型
+  plan: Plan; // m08：携带规划领域对象
   status: "created" | "updated" | "completed";
 }
 
 export interface TitleEvent extends BaseEvent {
   type: "title";
   title: string;
+}
+
+// m08：单步执行事件（react agent 执行子步骤时产出）
+export interface StepEvent extends BaseEvent {
+  type: "step";
+  step: Step;
+  status: "started" | "completed" | "failed";
 }
 
 // 判别联合：TypeScript 的 discriminator 字段是 'type'
@@ -68,7 +76,8 @@ export type Event =
   | DoneEvent
   | WaitEvent
   | PlanEvent
-  | TitleEvent;
+  | TitleEvent
+  | StepEvent;
 
 // 工厂函数：自动填 id + createdAt（你来实现）
 export function createEvent(
