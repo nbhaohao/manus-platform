@@ -14,15 +14,23 @@ export interface BrowserToolsOptions {
  * 返回 null = 通过；返回字符串 = 拦截理由（含域名，供 ToolResult.message 用）。
  */
 function checkDomain(url: string, allowedDomains: string[]): string | null {
-  // TODO: stage 5
-  // if (allowedDomains.length === 0) return null          ← 无白名单不限制
-  // let host: string
-  // try { host = new URL(url).hostname }
-  // catch { return "URL 格式错误: " + url }
-  // const ok = allowedDomains.some(d => host === d || host.endsWith("." + d))
-  // if (!ok) return "域名 " + host + " 不在白名单内（允许: " + allowedDomains.join(", ") + "）"
-  // return null
-  return null; // stage 4 先不限制，stage 5 实现白名单
+  if (allowedDomains.length === 0) return null;
+  let host: string;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return "URL 格式错误: " + url;
+  }
+  const ok = allowedDomains.some((d) => host === d || host.endsWith("." + d));
+  if (!ok)
+    return (
+      "域名 " +
+      host +
+      " 不在白名单内（允许: " +
+      allowedDomains.join(", ") +
+      "）"
+    );
+  return null;
 }
 
 export function createBrowserTools(
