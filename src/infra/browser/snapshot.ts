@@ -13,11 +13,9 @@ export async function saveSnapshot(
   runsDir: string,
   name: string,
 ): Promise<void> {
-  // TODO: stage 6
-  // 1. await mkdir(runsDir, { recursive: true })          ← 目录不存在时自动建
-  // 2. const png = await page.screenshot({ type: "png" })
-  // 3. await writeFile(join(runsDir, name + ".png"), png)
-  // 4. const summary = "URL: " + page.url + "\n"
-  // 5. await writeFile(join(runsDir, name + ".txt"), summary, "utf8")
-  throw new Error("TODO: stage 6 — saveSnapshot 未实现");
+  await mkdir(runsDir, { recursive: true });
+  const png = await page.screenshot({ type: "png" });
+  await writeFile(join(runsDir, name + ".png"), png);
+  const summary = "URL: " + page.url + "\n";
+  await writeFile(join(runsDir, name + ".txt"), summary, "utf8");
 }
