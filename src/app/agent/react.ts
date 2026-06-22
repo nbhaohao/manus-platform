@@ -40,43 +40,67 @@ export class ReActAgent extends BaseAgent {
     step: Step,
     message: string,
   ): AsyncGenerator<Event> {
-    // TODO: stage 3 — executeStep
-    // 1. const query = fillPrompt(EXECUTION_PROMPT, { message, attachments:"", language: plan.language, step: step.description })
-    // 2. step.status = RUNNING; yield createEvent("step", { step, status:"started" }) as StepEvent
-    // 3. for await (const ev of this.invoke(query)) {
-    //      if (ev.type === "message") {                 // 终态：LLM 产出 JSON 结果文本
-    //        step.status = COMPLETED
-    //        const parsed = await parseJSON(ev.message, {})
-    //        step.success = Boolean(parsed.success)
-    //        step.result  = parsed.result ? String(parsed.result) : undefined
-    //        step.attachments = Array.isArray(parsed.attachments) ? parsed.attachments.map(String) : []
-    //        yield createEvent("step", { step, status:"completed" }) as StepEvent
-    //        if (step.result) yield createEvent("message", { role:"assistant", message: step.result, attachments:[] }) as MessageEvent
-    //        continue
-    //      } else if (ev.type === "error") {
-    //        step.status = FAILED; step.error = ev.error
-    //        yield createEvent("step", { step, status:"failed" }) as StepEvent
-    //      }
-    //      yield ev                                     // 工具事件等透传
-    //    }
-    // 4. step.status = COMPLETED
-    throw new Error("TODO: stage 3 — executeStep");
+    const query = fillPrompt(EXECUTION_PROMPT, {
+      message,
+      attachments: "",
+      language: plan.language,
+      step: step.description,
+    });
+    step.status = ExecutionStatus.RUNNING;
+    yield createEvent("step", { step, status: "started" }) as StepEvent;
+    for await (const ev of this.invoke(query)) {
+      if (ev.type === "message") {
+        // 终态：LLM 产出 JSON 结果文本
+        step.status = ExecutionStatus.COMPLETED;
+        const parsed = (await parseJSON(ev.message, {})) as {
+          success: boolean;
+          result?: string;
+          attachments?: unknown[];
+        };
+        step.success = Boolean(parsed.success);
+        step.result = parsed.result ? String(parsed.result) : undefined;
+        step.attachments = Array.isArray(parsed.attachments)
+          ? parsed.attachments.map(String)
+          : [];
+        if (step.result)
+          yield createEvent("message", {
+            role: "assistant",
+            message: step.result,
+            attachments: [],
+          }) as MessageEvent;
+        yield createEvent("step", { step, status: "completed" }) as StepEvent;
+        return;
+      } else if (ev.type === "error") {
+        step.status = ExecutionStatus.FAILED;
+        step.error = ev.error;
+        yield createEvent("step", { step, status: "failed" }) as StepEvent;
+        return;
+      }
+      yield ev; // 工具事件等透传
+    }
+    step.status = ExecutionStatus.COMPLETED;
+    yield createEvent("step", { step, status: "completed" }) as StepEvent;
   }
 
   // ── stage 3 · summarize ───────────────────────────────────────────────────
   // 全部步骤完成后，汇总历史生成最终回复。
   async *summarize(): AsyncGenerator<Event> {
-    // TODO: stage 3 — summarize
-    // 1. for await (const ev of this.invoke(SUMMARIZE_PROMPT)) {
-    //      if (ev.type === "message") {
-    //        const parsed = await parseJSON(ev.message, {})
-    //        yield createEvent("message", {
-    //          role:"assistant",
-    //          message: String(parsed.message ?? ev.message),
-    //          attachments: Array.isArray(parsed.attachments) ? parsed.attachments : [],
-    //        }) as MessageEvent
-    //      } else { yield ev }
-    //    }
-    throw new Error("TODO: stage 3 — summarize");
+    for await (const ev of this.invoke(SUMMARIZE_PROMPT)) {
+      if (ev.type === "message") {
+        const parsed = (await parseJSON(ev.message, {})) as {
+          message?: string;
+          attachments?: unknown[];
+        };
+        yield createEvent("message", {
+          role: "assistant",
+          message: String(parsed.message ?? ev.message),
+          attachments: Array.isArray(parsed.attachments)
+            ? parsed.attachments
+            : [],
+        }) as MessageEvent;
+      } else {
+        yield ev;
+      }
+    }
   }
 }

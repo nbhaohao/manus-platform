@@ -72,19 +72,38 @@ export class PlannerAgent extends BaseAgent {
   // ── stage 2 · updatePlan ──────────────────────────────────────────────────
   // 按"第一个未完成步骤之后全部重规划"的规则合并：保留已完成前缀 + 用新步骤替换其后。
   async *updatePlan(plan: Plan, step: Step): AsyncGenerator<Event> {
-    // TODO: stage 2 — updatePlan（按"已完成前缀不动、其后重规划"合并）
-    // 1. const query = fillPrompt(UPDATE_PLAN_PROMPT, { plan: JSON.stringify(plan), step: JSON.stringify(step) })
-    // 2. for await (const ev of this.invoke(query)) {
-    //      if (ev.type === "message") {
-    //        const parsed = await parseJSON(ev.message, {})
-    //        const newSteps = (Array.isArray(parsed.steps) ? parsed.steps : [])
-    //          .map(o => makeStep(String(o.description ?? ""), o.id ? String(o.id) : undefined))
-    //        // 找旧计划第一个「未完成」步骤下标 firstPending（用 stepDone 取反）
-    //        // 若存在：plan.steps = [...已完成前缀(slice 0..firstPending), ...newSteps]
-    //        //   —— 关键：不动已完成步骤，只替换其后，保持「重规划」语义
-    //        yield createEvent("plan", { plan, status: "updated" }) as PlanEvent
-    //      } else { yield ev }
-    //    }
-    throw new Error("TODO: stage 2 — updatePlan");
+    const query = fillPrompt(UPDATE_PLAN_PROMPT, {
+      plan: JSON.stringify(plan),
+      step: JSON.stringify(step),
+    });
+    for await (const ev of this.invoke(query)) {
+      if (ev.type === "message") {
+        const parsed = (await parseJSON(ev.message, {})) as Record<
+          string,
+          unknown
+        >;
+        const newSteps = (Array.isArray(parsed.steps) ? parsed.steps : []).map(
+          (o) =>
+            makeStep(
+              String(o.description ?? ""),
+              o.id ? String(o.id) : undefined,
+            ),
+        );
+        // 找旧计划第一个「未完成」步骤下标 firstPending（用 stepDone 取反）
+        // 若存在：plan.steps = [...已完成前缀(slice 0..firstPending), ...newSteps]
+        //   —— 关键：不动已完成步骤，只替换其后，保持「重规划」语义
+        const firstPending = plan.steps.findIndex((s) => !s.success);
+        const updatedPlan = {
+          ...plan,
+          steps: [...plan.steps.slice(0, firstPending), ...newSteps],
+        };
+        yield createEvent("plan", {
+          plan: updatedPlan,
+          status: "updated",
+        }) as PlanEvent;
+      } else {
+        yield ev;
+      }
+    }
   }
 }

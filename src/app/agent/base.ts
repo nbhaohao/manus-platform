@@ -161,24 +161,6 @@ export class BaseAgent {
 
   // ── stage 1/4/5 · invoke 主循环 ───────────────────────────────────────────
   async *invoke(query: string, format?: string): AsyncGenerator<Event> {
-    // TODO: stage 1 —— ReAct 主循环骨架（无 tool_calls 即终态 / 最大迭代）
-    // 1. const fmt = format ?? this.format
-    // 2. let message = await this.invokeLlm([{ role:'user', content: query }], fmt)
-    // 3. let i = 0
-    //    for (; i < this.config.maxIterations; i++) {
-    //      const tcs = message.tool_calls as LLMToolCall[] | undefined
-    //      if (!tcs || tcs.length === 0) break          // 终态：LLM 给了文本答案
-    //      const toolMessages: LLMMessage[] = []
-    //      // —— 本关(stage 1)循环体先留空 —— 工具执行 + 事件产出留到 stage 4/5（见各关卡页）
-    //      message = await this.invokeLlm(toolMessages)   // 带工具结果再问，进入下一轮
-    //    }
-    // 4. 超过最大迭代且仍在调用工具 → yield createEvent('error', {...}) as ErrorEvent; return
-    // 5. 终态：message.content != null
-    //      → yield createEvent('message', { role:'assistant', message: message.content, attachments: [] }) as MessageEvent
-    //    否则 → yield createEvent('error', { error:'Agent 未能生成有效回复内容' }) as ErrorEvent
-    //
-    // 提示：stage 1 只搭循环控制——循环体先留空（toolMessages=[] + 再次 invokeLlm），
-    //       「终态」「最大迭代」两条断言即可变绿；工具执行/事件留到 stage 4/5。
     const fmt = format ?? this.format;
     let message = await this.invokeLlm([{ role: "user", content: query }], fmt);
     let i = 0;
