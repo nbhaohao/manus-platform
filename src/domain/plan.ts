@@ -63,18 +63,21 @@ export function makePlan(init: Partial<Plan> = {}): Plan {
 
 /** 步骤是否结束（完成或失败都算结束）。 */
 export function stepDone(step: Step): boolean {
-  // TODO: stage 1 —— status 为 COMPLETED 或 FAILED 时返回 true
-  throw new Error("TODO: stage 1 — stepDone");
+  return (
+    step.status === ExecutionStatus.COMPLETED ||
+    step.status === ExecutionStatus.FAILED
+  );
 }
 
 /** 计划是否结束。 */
 export function planDone(plan: Plan): boolean {
-  // TODO: stage 1 —— 同 stepDone，判断 plan.status 是否 COMPLETED/FAILED
-  throw new Error("TODO: stage 1 — planDone");
+  return (
+    plan.status === ExecutionStatus.COMPLETED ||
+    plan.status === ExecutionStatus.FAILED
+  );
 }
 
 /** 取下一个需要执行的步骤（第一个未结束的）；全部结束返回 undefined。 */
 export function getNextStep(plan: Plan): Step | undefined {
-  // TODO: stage 1 —— 返回 plan.steps 中第一个「未结束」的步骤（用 stepDone 判断），没有则 undefined
-  throw new Error("TODO: stage 1 — getNextStep");
+  return plan.steps.find((step) => !stepDone(step));
 }
