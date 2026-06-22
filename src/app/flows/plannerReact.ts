@@ -39,45 +39,58 @@ export class PlannerReActFlow extends BaseFlow {
 
   // ── stage 5 · 状态机主循环 + stage 6 · 顶层事件 ───────────────────────────
   async *invoke(message: string): AsyncGenerator<Event> {
-    // ── stage 5：状态机主循环（先把这层写绿）────────────────────────────────
-    // this.status = PLANNING; let step: Step | undefined
-    // while (true) {
-    //   if (IDLE)        → this.status = PLANNING
-    //   else if (PLANNING) {
-    //     for await (ev of this.planner.createPlan(message)) {
-    //       if (ev.type==="plan" && ev.status==="created") this.plan = ev.plan
-    //       //  ↑↑ stage 6 在这里补发 TitleEvent + MessageEvent(ev.plan.message)
-    //       yield ev
-    //     }
-    //     this.status = EXECUTING
-    //     if (!this.plan || this.plan.steps.length === 0) this.status = COMPLETED
-    //   }
-    //   else if (EXECUTING) {
-    //     this.plan!.status = RUNNING
-    //     step = getNextStep(this.plan!)
-    //     if (!step) { this.status = SUMMARIZING; continue }   // 没有下一步 → 去汇总
-    //     for await (ev of this.react.executeStep(this.plan!, step, message)) yield ev
-    //     this.status = UPDATING
-    //   }
-    //   else if (UPDATING) {                                   // 重规划剩余步骤
-    //     for await (ev of this.planner.updatePlan(this.plan!, step!)) yield ev
-    //     this.status = EXECUTING
-    //   }
-    //   else if (SUMMARIZING) {
-    //     for await (ev of this.react.summarize()) yield ev
-    //     this.status = COMPLETED
-    //   }
-    //   else if (COMPLETED) {
-    //     this.plan!.status = ExecutionStatus.COMPLETED
-    //     //  ↑↑ stage 6 在这里补发 PlanEvent(status:"completed")
-    //     break
-    //   }
-    // }
-    //
-    // ── stage 6：在上面 3 处「↑↑」加顶层 framing 事件 ──────────────────────────
-    //   ① PLANNING：plan created 时 yield TitleEvent(plan.title) + MessageEvent(plan.message)
-    //   ② COMPLETED：break 前 yield PlanEvent({ plan, status:"completed" })
-    //   ③ 循环结束后（while 之外）：yield DoneEvent()
-    throw new Error("TODO: stage 5/6 — PlannerReActFlow.invoke");
+    this.status = FlowStatus.PLANNING;
+    let step: Step | undefined;
+    while (true) {
+      if (this.status === FlowStatus.PLANNING) {
+        let ev: Event;
+        for await (ev of this.planner.createPlan(message)) {
+          if (ev.type === "plan" && ev.status === "created") {
+            this.plan = ev.plan;
+            // stage 6：补发 TitleEvent + MessageEvent
+            yield createEvent("title", { title: ev.plan.title }) as TitleEvent;
+            yield createEvent("message", {
+              message: ev.plan.message,
+            }) as MessageEvent;
+          }
+          yield ev;
+        }
+        this.status = FlowStatus.EXECUTING;
+        if (!this.plan || this.plan.steps.length === 0)
+          this.status = FlowStatus.COMPLETED;
+      } else if (this.status === FlowStatus.EXECUTING) {
+        this.plan!.status = ExecutionStatus.RUNNING;
+        step = getNextStep(this.plan!);
+        if (!step) {
+          this.status = FlowStatus.SUMMARIZING;
+          continue;
+        } // 没有下一步 → 去汇总
+        let ev: Event;
+        for await (ev of this.react.executeStep(this.plan!, step, message))
+          yield ev;
+        this.status = FlowStatus.UPDATING;
+      } else if (this.status === FlowStatus.UPDATING) {
+        // 重规划剩余步骤
+        let ev: Event;
+        for await (ev of this.planner.updatePlan(this.plan!, step!)) {
+          yield ev;
+        }
+        this.status = FlowStatus.EXECUTING;
+      } else if (this.status === FlowStatus.SUMMARIZING) {
+        let ev: Event;
+        for await (ev of this.react.summarize()) yield ev;
+        this.status = FlowStatus.COMPLETED;
+      } else if (this.status === FlowStatus.COMPLETED) {
+        this.plan!.status = ExecutionStatus.COMPLETED;
+        // stage 6：补发 PlanEvent(status:"completed")
+        yield createEvent("plan", {
+          plan: this.plan!,
+          status: "completed",
+        }) as PlanEvent;
+        break;
+      }
+    }
+    // stage 6：循环结束后 yield DoneEvent
+    yield createEvent("done", {}) as DoneEvent;
   }
 }
