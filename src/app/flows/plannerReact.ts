@@ -47,7 +47,6 @@ export class PlannerReActFlow extends BaseFlow {
         for await (ev of this.planner.createPlan(message)) {
           if (ev.type === "plan" && ev.status === "created") {
             this.plan = ev.plan;
-            // stage 6：补发 TitleEvent + MessageEvent
             yield createEvent("title", { title: ev.plan.title }) as TitleEvent;
             yield createEvent("message", {
               message: ev.plan.message,
@@ -82,7 +81,6 @@ export class PlannerReActFlow extends BaseFlow {
         this.status = FlowStatus.COMPLETED;
       } else if (this.status === FlowStatus.COMPLETED) {
         this.plan!.status = ExecutionStatus.COMPLETED;
-        // stage 6：补发 PlanEvent(status:"completed")
         yield createEvent("plan", {
           plan: this.plan!,
           status: "completed",
