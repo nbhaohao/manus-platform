@@ -38,6 +38,9 @@ import { createSandboxFileTools } from "./infra/tools/sandboxFile.ts";
 // m08 plan-and-execute 编排
 import { PlannerReActFlow } from "./app/flows/plannerReact.ts";
 import type { Event } from "./domain/models/event.ts";
+// m09 异步任务双流
+import { Task } from "./app/task.ts";
+import { AgentTaskRunner } from "./app/agentTaskRunner.ts";
 
 // ── 极简 ANSI 上色（不引依赖）──────────────────────────────────────────────
 const c = {
@@ -214,6 +217,15 @@ async function runFlowSession(
 
 async function main() {
   const config = loadConfig();
+
+  if (process.argv.includes("--task")) {
+    // TODO stage 6: AgentTaskRunner 路径（双流解耦演示）
+    // 1. Task.create() 创建任务
+    // 2. 从 readline 读一条 query，put 进 task.inputStream
+    // 3. new AgentTaskRunner(new PlannerReActFlow(...)).invoke(task)
+    // 4. for await task.outputStream.getRange() 打印所有事件
+    throw new Error("TODO: stage 6 -- --task 路径未实现");
+  }
 
   if (process.argv.includes("--plan")) {
     // m08 plan-and-execute 模式：本机工具 + PlannerReActFlow
