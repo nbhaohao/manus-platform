@@ -12,12 +12,7 @@ import {
   type Event,
   type PlanEvent,
 } from "../../domain/models/event.ts";
-import {
-  type Plan,
-  type Step,
-  makePlan,
-  makeStep,
-} from "../../domain/plan.ts";
+import { type Plan, type Step, makePlan, makeStep } from "../../domain/plan.ts";
 import {
   PLANNER_SYSTEM_PROMPT,
   CREATE_PLAN_PROMPT,
@@ -30,7 +25,10 @@ function planFromParsed(obj: Record<string, unknown>): Plan {
   const rawSteps = Array.isArray(obj.steps) ? obj.steps : [];
   const steps: Step[] = rawSteps.map((s) => {
     const o = s as Record<string, unknown>;
-    return makeStep(String(o.description ?? ""), o.id ? String(o.id) : undefined);
+    return makeStep(
+      String(o.description ?? ""),
+      o.id ? String(o.id) : undefined,
+    );
   });
   return makePlan({
     title: String(obj.title ?? ""),
@@ -58,17 +56,17 @@ export class PlannerAgent extends BaseAgent {
   // ── stage 2 · createPlan ──────────────────────────────────────────────────
   // 根据用户消息生成计划：拼提示词 → invoke → 把 MessageEvent 的 JSON 解析成 Plan → 发 PlanEvent。
   async *createPlan(message: string): AsyncGenerator<Event> {
-    // TODO: stage 2 — createPlan
-    // 1. const query = fillPrompt(CREATE_PLAN_PROMPT, { message, attachments: "" })
-    // 2. for await (const ev of this.invoke(query)) {
-    //      // 因 format=json_object + toolChoice=none，正常会拿到 MessageEvent（content 是 JSON）
-    //      if (ev.type === "message") {
-    //        const parsed = await parseJSON(ev.message, {})        // 容错解析
-    //        const plan = planFromParsed(parsed)                   // JSON → Plan 领域对象（已就位 helper）
-    //        yield createEvent("plan", { plan, status: "created" }) as PlanEvent
-    //      } else { yield ev }                                     // 其他事件透传
-    //    }
-    throw new Error("TODO: stage 2 — createPlan");
+    const query = fillPrompt(CREATE_PLAN_PROMPT, { message, attachments: "" });
+    for await (const ev of this.invoke(query)) {
+      // 因 format=json_object + toolChoice=none，正常会拿到 MessageEvent（content 是 JSON）
+      if (ev.type === "message") {
+        const parsed = await parseJSON(ev.message, {}); // 容错解析
+        const plan = planFromParsed(parsed as Record<string, unknown>); // JSON → Plan 领域对象（已就位 helper）
+        yield createEvent("plan", { plan, status: "created" }) as PlanEvent;
+      } else {
+        yield ev;
+      } // 其他事件透传
+    }
   }
 
   // ── stage 2 · updatePlan ──────────────────────────────────────────────────
