@@ -1,4 +1,3 @@
-// 已就位（AI 生成）
 // Source: materials/mooc-manus/api/app/domain/external/message_queue.py
 
 export interface MessageQueuePort<T = string> {
@@ -9,4 +8,6 @@ export interface MessageQueuePort<T = string> {
   isEmpty(): Promise<boolean>
   size(): Promise<number>
   deleteMessage(messageId: string): Promise<boolean>
+  getRange(startId?: string, endId?: string, count?: number): AsyncGenerator<[string, T]>
+  getLatestId(): Promise<string>
 }

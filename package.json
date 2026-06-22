@@ -4,17 +4,19 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "verify": "vitest run tests/m08.test.ts",
+    "verify": "vitest run tests/m09.test.ts",
     "v": "vitest run -t",
     "start": "tsx src/main.ts",
     "agent": "tsx --env-file .env src/cli.ts",
     "e2e:m03": "tsx scripts/e2e_m03.ts",
     "e2e:m04": "tsx scripts/e2e_m04.ts",
     "e2e:m06": "tsx scripts/e2e_m06.ts",
-    "e2e:m07": "tsx --env-file .env scripts/e2e_m07.ts"
+    "e2e:m07": "tsx --env-file .env scripts/e2e_m07.ts",
+    "e2e:m09": "tsx scripts/e2e_m09.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.5",
+    "ioredis": "^5.3.2",
     "dockerode": "^4.0.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.7.0",
