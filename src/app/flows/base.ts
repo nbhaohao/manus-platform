@@ -22,7 +22,6 @@ export abstract class BaseFlow {
   // ── stage 4 · done 谓词 ───────────────────────────────────────────────────
   // 只读属性：流是否已结束（状态机走到 COMPLETED）。
   get done(): boolean {
-    // TODO: stage 4 —— 当 this.status === FlowStatus.COMPLETED 时返回 true
-    throw new Error("TODO: stage 4 — done");
+    return this.status === FlowStatus.COMPLETED;
   }
 }
