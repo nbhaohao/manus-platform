@@ -73,17 +73,17 @@ export class AgentService {
   }
 
   // ── Stage 3: SSE event_generator——按游标循环读 output_stream（核心手写）──
-  // TODO stage 3: 从 latestEventId 之后逐条产出事件
-  //   1. cursor = latestEventId || '0'
-  //   2. while (true):
-  //        [id, str] = await task.outputStream.get(cursor)
-  //        if (id === null) break   // 流读完（本课同步填充；真实场景这里 block 轮询）
-  //        cursor = id
-  //        event = JSON.parse(str); event.id = id
-  //        yield event
-  //        if (isTerminalEvent(event)) break
   async *streamEvents(task: Task, latestEventId = "0"): AsyncGenerator<Event> {
-    throw new Error("TODO: stage 3");
+    let cursor = latestEventId || "0";
+    while (true) {
+      const [id, str] = await task.outputStream.get(cursor);
+      if (id === null) break;
+      cursor = id;
+      const event = JSON.parse(str);
+      event.id = id;
+      yield event;
+      if (isTerminalEvent(event)) break;
+    }
   }
 
   // ── Stage 4: 事件持久化的重放——从 DB 取游标之后的历史（核心手写）──────────
