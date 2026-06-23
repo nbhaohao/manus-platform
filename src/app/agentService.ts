@@ -87,14 +87,14 @@ export class AgentService {
   }
 
   // ── Stage 4: 事件持久化的重放——从 DB 取游标之后的历史（核心手写）──────────
-  // TODO stage 4: 重连时先重放已落库的历史事件（stream 可能已过期，DB 是冷备）
-  //   1. session = await this.sessionRepo.getById(sessionId); if (!session) return
-  //   2. started = (!afterId || afterId === '0')
-  //   3. for (const event of session.events):
-  //        if (started) yield event
-  //        else if (event.id === afterId) started = true   // 命中游标，其后的才发
   async *getHistory(sessionId: string, afterId = "0"): AsyncGenerator<Event> {
-    throw new Error("TODO: stage 4");
+    const session = await this.sessionRepo.getById(sessionId);
+    if (!session) return;
+    let started = !afterId || afterId === "0";
+    for (const event of session.events) {
+      if (started) yield event;
+      else if (event.id === afterId) started = true;
+    }
   }
 
   // ── Stage 5: chat 集成——断点续传（核心手写）──────────────────────────────
