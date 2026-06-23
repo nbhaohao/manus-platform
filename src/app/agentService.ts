@@ -98,25 +98,27 @@ export class AgentService {
   }
 
   // ── Stage 5: chat 集成——断点续传（核心手写）──────────────────────────────
-  // TODO stage 5: 串起「起任务 / 复用任务 + 流式产出 + 落库」，重连绝不重调 LLM
-  //   1. session = await this.sessionRepo.getById(sessionId); if (!session) throw
-  //   2. let task
-  //   3. if (message):                         // 新消息 → 起任务（会调用 flow / LLM）
-  //        task = await this.startChat(session, message)
-  //      else:                                 // 重连 → 复用既有任务，绝不重启
-  //        task = this.tasks.get(session.taskId ?? '')
-  //        if (!task) return
-  //   4. for await (const event of this.streamEvents(task, latestEventId)):
-  //        await this.sessionRepo.addEvent(sessionId, event)   // 落库（可重放）
-  //        yield event
-  //        if (isTerminalEvent(event) && session.status === SessionStatus.RUNNING)
-  //          transitionSession(session, SessionStatus.COMPLETED)
   async *chat(
     sessionId: string,
     message?: string,
     latestEventId = "0",
   ): AsyncGenerator<Event> {
-    throw new Error("TODO: stage 5");
+    const session = await this.sessionRepo.getById(sessionId);
+    if (!session) return;
+    let task: Task | undefined;
+    if (message) {
+      task = await this.startChat(session, message);
+    } else {
+      task = this.tasks.get(session.taskId ?? "");
+    }
+    if (!task) return;
+    for await (const event of this.streamEvents(task, latestEventId)) {
+      await this.sessionRepo.addEvent(sessionId, event);
+      yield event;
+      if (isTerminalEvent(event) && session.status === SessionStatus.RUNNING)
+        transitionSession(session, SessionStatus.COMPLETED);
+    }
+    await this.sessionRepo.save(session);
   }
 
   // ── Stage 6: 停止会话 / 终态（核心手写）──────────────────────────────────
