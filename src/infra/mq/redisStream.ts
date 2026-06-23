@@ -74,8 +74,6 @@ export class RedisStreamMQ<T = string> implements MessageQueuePort<T> {
   }
 
   // TODO stage 2: xrevrange 取最新 ID（SSE 初始化游标用）
-  // 1. (this.redis as any).xrevrange(streamName, '+', '-', 'COUNT', 1)
-  // 2. 空则返回 '0'，否则返回 result[0][0]
   async getLatestId(): Promise<string> {
     const result = await (this.redis as any).xrevrange(
       this.streamName,
@@ -87,42 +85,60 @@ export class RedisStreamMQ<T = string> implements MessageQueuePort<T> {
     return result?.[0]?.[0] ?? "0";
   }
 
-  // TODO stage 3: SET NX EX 分布式锁（轮询直到成功或超时）
-  // 1. lockValue = randomUUID()
-  // 2. deadline = Date.now() + timeoutSeconds * 1000
-  // 3. while (Date.now() < deadline):
-  //      result = await this.redis.set(lockKey, lockValue, 'EX', lockExpireSeconds, 'NX')
-  //      if result === 'OK' return lockValue
-  //      await new Promise(r => setTimeout(r, 100))
-  // 4. return null（超时）
   private async _acquireLock(
     lockKey: string,
     timeoutSeconds = 5,
   ): Promise<string | null> {
-    throw new Error("TODO: stage 3");
+    const lockValue = randomUUID();
+    const deadline = Date.now() + timeoutSeconds * 1000;
+    while (Date.now() < deadline) {
+      const result = await this.redis.set(
+        lockKey,
+        lockValue,
+        "EX",
+        this.lockExpireSeconds,
+        "NX",
+      );
+      if (result === "OK") return lockValue;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
   }
 
   // TODO stage 3: Lua 脚本原子释放锁（防止误删他人锁）
-  // 1. (this.redis as any).eval(this.releaseLua, 1, lockKey, lockValue)
-  // 2. 返回 result === 1
   private async _releaseLock(
     lockKey: string,
     lockValue: string,
   ): Promise<boolean> {
-    throw new Error("TODO: stage 3");
+    const result = await (this.redis as any).eval(
+      this.releaseLua,
+      1,
+      lockKey,
+      lockValue,
+    );
+    return result === 1;
   }
 
   // TODO stage 3: 原子 pop（加锁 → 取首条 → 删除 → 解锁）
-  // 1. lockKey = 'lock:' + streamName + ':pop'
-  // 2. lockValue = await _acquireLock(lockKey)，失败返回 [null, null]
-  // 3. try:
-  //      messages = (this.redis as any).xrange(streamName, '-', '+', 'COUNT', 1)
-  //      若空返回 [null, null]
-  //      [id, fields] = messages[0]，xdel streamName id
-  //      return [id, fields[1] as T]
-  // 4. finally: _releaseLock(lockKey, lockValue)
   async pop(): Promise<[string, T] | [null, null]> {
-    throw new Error("TODO: stage 3");
+    const lockKey = `lock:${this.streamName}:pop`;
+    const lockValue = await this._acquireLock(lockKey);
+    if (lockValue === null) return [null, null];
+    try {
+      const messages = await (this.redis as any).xrange(
+        this.streamName,
+        "-",
+        "+",
+        "COUNT",
+        1,
+      );
+      if (messages.length === 0) return [null, null];
+      const [id, fields] = messages[0];
+      await this.redis.xdel(this.streamName, id);
+      return [id, fields[1] as T];
+    } finally {
+      await this._releaseLock(lockKey, lockValue);
+    }
   }
 
   async clear(): Promise<void> {
