@@ -39,7 +39,10 @@ export function isTerminalEvent(event: Event): boolean {
 //   2. 若 to 不在列表里 → throw new Error(`非法状态迁移 ${session.status} -> ${to}`)
 //   3. 合法则 session.status = to
 export function transitionSession(session: Session, to: SessionStatus): void {
-  throw new Error("TODO: stage 1");
+  if (!TRANSITIONS[session.status]?.includes(to)) {
+    throw new Error(`非法状态迁移 ${session.status} -> ${to}`);
+  }
+  session.status = to;
 }
 
 export class AgentService {
@@ -77,10 +80,7 @@ export class AgentService {
   //        event = JSON.parse(str); event.id = id
   //        yield event
   //        if (isTerminalEvent(event)) break
-  async *streamEvents(
-    task: Task,
-    latestEventId = "0",
-  ): AsyncGenerator<Event> {
+  async *streamEvents(task: Task, latestEventId = "0"): AsyncGenerator<Event> {
     throw new Error("TODO: stage 3");
   }
 
@@ -91,10 +91,7 @@ export class AgentService {
   //   3. for (const event of session.events):
   //        if (started) yield event
   //        else if (event.id === afterId) started = true   // 命中游标，其后的才发
-  async *getHistory(
-    sessionId: string,
-    afterId = "0",
-  ): AsyncGenerator<Event> {
+  async *getHistory(sessionId: string, afterId = "0"): AsyncGenerator<Event> {
     throw new Error("TODO: stage 4");
   }
 
