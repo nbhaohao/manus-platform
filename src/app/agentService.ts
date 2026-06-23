@@ -128,6 +128,10 @@ export class AgentService {
   //   3. transitionSession(session, SessionStatus.COMPLETED)
   //   4. await this.sessionRepo.save(session)
   async stopSession(sessionId: string): Promise<void> {
-    throw new Error("TODO: stage 6");
+    const session = await this.sessionRepo.getById(sessionId);
+    if (!session) return;
+    if (session.taskId) this.tasks.delete(session.taskId);
+    transitionSession(session, SessionStatus.COMPLETED);
+    await this.sessionRepo.save(session);
   }
 }
