@@ -86,18 +86,31 @@ async function runSession(
   const llm = new OpenAICompatLLM(config.llm);
   // 复用同一个 Memory 跨轮 → 你能亲眼看到「上一轮说过的内容」在下一轮还在
   const memory = new Memory();
-  const agent = new BaseAgent(llm, [registry], config.agent, SYSTEM_PROMPT, memory);
+  const agent = new BaseAgent(
+    llm,
+    [registry],
+    config.agent,
+    SYSTEM_PROMPT,
+    memory,
+  );
 
   console.log(c.bold("\n  manus-platform · 交互式 Agent CLI"));
   console.log(c.dim("  ─────────────────────────────────────────"));
-  console.log(`  模型    ${c.cyan(config.llm.modelName)}  @ ${config.llm.baseUrl}`);
   console.log(
-    `  工具    ${registry.getTools().map((t) => t.function.name).join(", ")}`,
+    `  模型    ${c.cyan(config.llm.modelName)}  @ ${config.llm.baseUrl}`,
+  );
+  console.log(
+    `  工具    ${registry
+      .getTools()
+      .map((t) => t.function.name)
+      .join(", ")}`,
   );
   console.log(`  执行    ${where}`);
   if (!config.llm.apiKey) {
     console.log(c.yellow("  ⚠ 未配置 LLM_API_KEY —— 真正发起对话会失败。"));
-    console.log(c.yellow("    复制 .env.example 为 .env 并填入 key（默认 DeepSeek）。"));
+    console.log(
+      c.yellow("    复制 .env.example 为 .env 并填入 key（默认 DeepSeek）。"),
+    );
   }
   console.log(c.dim("  输入 query 回车；exit / Ctrl-D 退出。记忆跨轮保留。\n"));
 
@@ -148,13 +161,22 @@ async function runFlowSession(
 
   console.log(c.bold("\n  manus-platform · Planner+ReAct Flow CLI"));
   console.log(c.dim("  ─────────────────────────────────────────"));
-  console.log(`  模型    ${c.cyan(config.llm.modelName)}  @ ${config.llm.baseUrl}`);
-  console.log(`  工具    ${registry.getTools().map((t) => t.function.name).join(", ")}`);
+  console.log(
+    `  模型    ${c.cyan(config.llm.modelName)}  @ ${config.llm.baseUrl}`,
+  );
+  console.log(
+    `  工具    ${registry
+      .getTools()
+      .map((t) => t.function.name)
+      .join(", ")}`,
+  );
   console.log(`  执行    ${where}`);
   if (!config.llm.apiKey) {
     console.log(c.yellow("  ⚠ 未配置 LLM_API_KEY —— 真正发起对话会失败。"));
   }
-  console.log(c.dim("  输入任务回车；先规划再逐步执行。exit / Ctrl-D 退出。\n"));
+  console.log(
+    c.dim("  输入任务回车；先规划再逐步执行。exit / Ctrl-D 退出。\n"),
+  );
 
   const rl = createInterface({ input: stdin, output: stdout });
   while (true) {
@@ -186,9 +208,13 @@ async function runFlowSession(
           }
         } else if (ev.type === "step") {
           if (ev.status === "started") {
-            console.log(c.cyan(`  ▶ 执行：${truncate(ev.step.description, 80)}`));
+            console.log(
+              c.cyan(`  ▶ 执行：${truncate(ev.step.description, 80)}`),
+            );
           } else if (ev.status === "failed") {
-            console.log(c.red(`    ✗ 步骤失败：${truncate(ev.step.error || "", 120)}`));
+            console.log(
+              c.red(`    ✗ 步骤失败：${truncate(ev.step.error || "", 120)}`),
+            );
           }
         } else if (ev.type === "tool") {
           if (ev.status === "calling") {
@@ -197,7 +223,9 @@ async function runFlowSession(
                 c.dim(`(${truncate(JSON.stringify(ev.functionArgs), 100)})`),
             );
           } else {
-            console.log(`       ↳ ${fmtResult(ev.functionResult as ToolResult)}`);
+            console.log(
+              `       ↳ ${fmtResult(ev.functionResult as ToolResult)}`,
+            );
           }
         } else if (ev.type === "message") {
           console.log(`\n  💬 ${ev.message}\n`);
@@ -224,7 +252,31 @@ async function main() {
     // 2. 从 readline 读一条 query，put 进 task.inputStream
     // 3. new AgentTaskRunner(new PlannerReActFlow(...)).invoke(task)
     // 4. for await task.outputStream.getRange() 打印所有事件
-    throw new Error("TODO: stage 6 -- --task 路径未实现");
+    const task = Task.create();
+
+    const mockFlow = async function* () {
+      yield {
+        type: "message",
+        role: "assistant",
+        message: "world",
+        created_at: "",
+      };
+      yield {
+        type: "done",
+        role: "assistant",
+        message: "",
+        created_at: "",
+      };
+    };
+    await new AgentTaskRunner(mockFlow as any).invoke(task);
+    const size = await task.outputStream.size();
+    console.log(`output_stream size: ${size}`);
+    if (size === 0) throw new Error("output_stream should not be empty");
+    const events: Event[] = [];
+    for await (const event of task.outputStream.getRange()) {
+      events.push(JSON.parse(event[1]));
+    }
+    console.log("events:", events);
   }
 
   if (process.argv.includes("--plan")) {
@@ -255,7 +307,11 @@ async function main() {
         createSandboxShellTool(sandbox),
         createSearchTool(new EchoSearchEngine()),
       ]);
-      await runSession(config, registry, `🐳 容器 ${image}（${container.id.slice(0, 12)}）`);
+      await runSession(
+        config,
+        registry,
+        `🐳 容器 ${image}（${container.id.slice(0, 12)}）`,
+      );
     });
     console.log(c.dim("  容器已销毁。"));
     return;
