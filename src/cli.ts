@@ -10,6 +10,8 @@
 //                           需本机有 Docker；镜像默认 python:3.12-slim（SANDBOX_IMAGE 可改）
 //   pnpm agent --plan       m08 plan-and-execute：PlannerReActFlow 先规划再逐步执行
 //                           （本机工具；亲眼看 plan/step/done 事件流）
+//   pnpm agent --chat       m10 SSE 断点续传：首连读一条就断 → 重连只挂回游标续读，
+//                           模型不重跑（mock flow，不需 LLM key）
 // 退出：  exit / quit / Ctrl-D
 import { createInterface } from "node:readline/promises";
 import { mkdir } from "node:fs/promises";
@@ -41,6 +43,10 @@ import type { Event } from "./domain/models/event.ts";
 // m09 异步任务双流
 import { Task } from "./app/task.ts";
 import { AgentTaskRunner } from "./app/agentTaskRunner.ts";
+// m10 SSE + 会话生命周期 + 断点续传
+import { AgentService } from "./app/agentService.ts";
+import { Session } from "./domain/models/session.ts";
+import { InMemorySessionRepository } from "./domain/repositories/session.ts";
 
 // ── 极简 ANSI 上色（不引依赖）──────────────────────────────────────────────
 const c = {
@@ -277,6 +283,45 @@ async function main() {
       events.push(JSON.parse(event[1]));
     }
     console.log("events:", events);
+  }
+
+  if (process.argv.includes("--chat")) {
+    // m10 体感：亲眼看「SSE 断了→重连只挂回游标，模型不重跑」。
+    // 用 mock flow（不调真 LLM）+ 计数器，首连读一条就断，重连续读剩余。
+    const repo = new InMemorySessionRepository();
+    const session = new Session();
+    await repo.save(session);
+    const state = { calls: 0 };
+    const flow = {
+      async *invoke(_msg: string) {
+        state.calls++;
+        yield { type: "message", role: "assistant", message: "正在处理…（前半段）" };
+        yield { type: "message", role: "assistant", message: "结果在此（后半段）" };
+        yield { type: "done", role: "assistant", message: "" };
+      },
+    };
+    const svc = new AgentService(repo, flow as any);
+
+    console.log(c.bold("\n  manus-platform · m10 SSE 断点续传 CLI"));
+    console.log(c.dim("  ─────────────────────────────────────────"));
+    console.log(c.cyan("  ① 首连 chat()，读到第一条事件就模拟客户端 kill：\n"));
+    let lastId = "0";
+    for await (const ev of svc.chat(session.id, "帮我跑个任务") as AsyncGenerator<Event>) {
+      console.log(`     ${c.dim(ev.id)}  ${ev.type}  ${(ev as any).message ?? ""}`);
+      lastId = ev.id;
+      console.log(c.yellow("     ✂ 断开！记下 latest_event_id = " + lastId + "\n"));
+      break;
+    }
+    console.log(c.cyan("  ② 重连 chat(message=undefined, latestEventId)，续读剩余：\n"));
+    for await (const ev of svc.chat(session.id, undefined, lastId) as AsyncGenerator<Event>) {
+      console.log(`     ${c.dim(ev.id)}  ${ev.type}  ${(ev as any).message ?? ""}`);
+    }
+    console.log(
+      "\n  " +
+        (state.calls === 1 ? c.green("✅") : c.red("✗")) +
+        ` flow(=LLM) 全程调用 ${state.calls} 次 —— 重连没有重跑模型。\n`,
+    );
+    return;
   }
 
   if (process.argv.includes("--plan")) {
