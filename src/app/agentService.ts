@@ -56,18 +56,20 @@ export class AgentService {
   ) {}
 
   // ── Stage 2: chat 起步——写入 input + 启动 task（核心手写）────────────────
-  // TODO stage 2: 把人类消息塞进任务输入流并跑起来
-  //   1. task = Task.create()
-  //   2. session.taskId = task.id; this.tasks.set(task.id, task)
-  //   3. await this.sessionRepo.save(session)
-  //   4. humanEvent = createEvent('message', { role:'user', message, attachments:[] })
-  //   5. await task.inputStream.put(JSON.stringify(humanEvent))
-  //   6. transitionSession(session, SessionStatus.RUNNING)
-  //   7. await new AgentTaskRunner(this.flow).invoke(task)
-  //      // ponytail: 真实代码是后台 asyncio Task；这里同步跑完，事件已全部落 output_stream
-  //   8. return task
   async startChat(session: Session, message: string): Promise<Task> {
-    throw new Error("TODO: stage 2");
+    const task = Task.create();
+    session.taskId = task.id;
+    this.tasks.set(task.id, task);
+    await this.sessionRepo.save(session);
+    const humanEvent = createEvent("message", {
+      role: "user",
+      message,
+      attachments: [],
+    });
+    await task.inputStream.put(JSON.stringify(humanEvent));
+    transitionSession(session, SessionStatus.RUNNING);
+    await new AgentTaskRunner(this.flow).invoke(task);
+    return task;
   }
 
   // ── Stage 3: SSE event_generator——按游标循环读 output_stream（核心手写）──
