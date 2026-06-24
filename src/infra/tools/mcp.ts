@@ -140,23 +140,28 @@ export class McpClientManager {
   }
 
   // ── Stage 5: 生命周期——initialize 幂等连全部 / cleanup 幂等清全部（核心手写）──
-  // TODO stage 5: 两者都幂等；cleanup 某连接关闭失败不阻断其余
-  //   initialize:
-  //     if (this.initialized) return
-  //     for (const [name, cfg] of Object.entries(this.servers)) {
-  //       try { await this.connect(name, cfg) } catch { /* 记错并跳过该 server */ }
-  //     }
-  //     this.initialized = true
-  //   cleanup:
-  //     if (!this.initialized) return
-  //     for (const client of this.clients.values()) {
-  //       try { await client.close() } catch { /* 某个失败不阻断其余 */ }
-  //     }
-  //     this.clients.clear(); this.toolDecls.clear(); this.initialized = false
   async initialize(): Promise<void> {
-    throw new Error("TODO: stage 5");
+    if (this.initialized) return;
+    for (const [name, cfg] of Object.entries(this.servers)) {
+      try {
+        await this.connect(name, cfg);
+      } catch {
+        /* 记错并跳过该 server */
+      }
+    }
+    this.initialized = true;
   }
   async cleanup(): Promise<void> {
-    throw new Error("TODO: stage 5");
+    if (!this.initialized) return;
+    for (const client of this.clients.values()) {
+      try {
+        await client.close();
+      } catch {
+        /* 某个失败不阻断其余 */
+      }
+    }
+    this.clients.clear();
+    this.toolDecls.clear();
+    this.initialized = false;
   }
 }
