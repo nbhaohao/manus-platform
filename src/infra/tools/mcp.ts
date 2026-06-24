@@ -51,21 +51,22 @@ export class McpClientManager {
   }
 
   // ── Stage 2: 工具发现 → LLMTool[]（加 mcp_<server>_ 前缀命名空间）（核心手写）─
-  // TODO stage 2: 遍历已连接 client，list 工具、转 schema、加前缀
-  //   const out: LLMTool[] = []
-  //   for (const [server, client] of this.clients) {
-  //     const { tools } = await client.listTools()
-  //     this.toolDecls.set(server, tools)                 // 缓存声明，供 s3/s4 复用
-  //     for (const t of tools) out.push({
-  //       type: "function",
-  //       function: { name: prefixed(server, t.name),
-  //                   description: "[" + server + "] " + (t.description ?? t.name),
-  //                   parameters: t.inputSchema },
-  //     })
-  //   }
-  //   return out
   async getAllTools(): Promise<LLMTool[]> {
-    throw new Error("TODO: stage 2");
+    const out: LLMTool[] = [];
+    for (const [server, client] of this.clients) {
+      const { tools } = await client.listTools();
+      this.toolDecls.set(server, tools); // 缓存声明，供 s3/s4 复用
+      for (const t of tools)
+        out.push({
+          type: "function",
+          function: {
+            name: prefixed(server, t.name),
+            description: "[" + server + "] " + (t.description ?? t.name),
+            parameters: t.inputSchema,
+          },
+        });
+    }
+    return out;
   }
 
   // ── Stage 3: 适配成本课 Tool[]（execute 转调 manager.invoke）（核心手写）──────
