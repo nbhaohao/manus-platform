@@ -87,7 +87,21 @@ export class McpClientManager {
   //   }
   //   return out
   async toTools(): Promise<Tool[]> {
-    throw new Error("TODO: stage 3");
+    if (this.toolDecls.size === 0) await this.getAllTools();
+    const out: Tool[] = [];
+    for (const [server, decls] of this.toolDecls) {
+      for (const d of decls) {
+        const name = prefixed(server, d.name);
+        out.push({
+          name,
+          description: d.description ?? d.name,
+          parameters: (d.inputSchema.properties ?? {}) as Tool["parameters"],
+          required: d.inputSchema.required ?? [],
+          execute: (args) => this.invoke(name, args), // ★ 调用收敛进 manager
+        });
+      }
+    }
+    return out;
   }
 
   // ── Stage 4: 调用——拆前缀路由 + callTool + 错误收敛为 ToolResult（核心手写）──
