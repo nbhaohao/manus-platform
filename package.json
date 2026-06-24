@@ -13,7 +13,8 @@
     "e2e:m06": "tsx scripts/e2e_m06.ts",
     "e2e:m07": "tsx --env-file .env scripts/e2e_m07.ts",
     "e2e:m09": "tsx scripts/e2e_m09.ts",
-    "e2e:m10": "tsx scripts/e2e_m10.ts"
+    "e2e:m10": "tsx scripts/e2e_m10.ts",
+    "e2e:m11": "tsx scripts/e2e_m11.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.5",
