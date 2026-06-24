@@ -120,7 +120,23 @@ export class McpClientManager {
     name: string,
     args: Record<string, unknown>,
   ): Promise<ToolResult> {
-    throw new Error("TODO: stage 4");
+    const server = Object.keys(this.servers).find((server) =>
+      name.startsWith(prefixed(server, "")),
+    );
+    const original = name.slice(prefixed(server ?? "", "").length);
+    if (!server) return { success: false, message: "未找到工具 " + name };
+    const client = this.clients.get(server);
+    if (!client) return { success: false, message: server + " 未连接" };
+    try {
+      const res = await client.callTool({ name: original, arguments: args });
+      const text = res.content
+        .map((c) => c.text ?? "")
+        .filter(Boolean)
+        .join("\n");
+      return { success: true, message: "", data: text };
+    } catch (e) {
+      return { success: false, message: String(e) };
+    }
   }
 
   // ── Stage 5: 生命周期——initialize 幂等连全部 / cleanup 幂等清全部（核心手写）──
