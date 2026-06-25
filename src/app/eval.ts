@@ -35,5 +35,27 @@ export interface EvalReport {
 //   passed = results.filter(r => r.ok).length
 //   return { total: cases.length, passed, failed: cases.length - passed, results }
 export async function runEval(cases: EvalCase[]): Promise<EvalReport> {
-  throw new Error("TODO: stage 4 — runEval");
+  const results: EvalResult[] = [];
+  for (const c of cases) {
+    try {
+      const events: Event[] = [];
+      for await (const ev of c.run()) events.push(ev);
+      const reason = c.check(events);
+      results.push(
+        reason === null
+          ? { name: c.name, ok: true }
+          : { name: c.name, ok: false, reason },
+      );
+    } catch (e) {
+      results.push({ name: c.name, ok: false, reason: String(e) });
+    }
+  }
+
+  const passed = results.filter((r) => r.ok).length;
+  return {
+    total: cases.length,
+    passed,
+    failed: cases.length - passed,
+    results,
+  };
 }

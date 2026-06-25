@@ -13,7 +13,8 @@ import { createEvent } from "../src/domain/models/event.ts";
 import type { HealthChecker } from "../src/ports/healthChecker.ts";
 import type { Event } from "../src/domain/models/event.ts";
 
-const tmp = () => join(tmpdir(), "manus-m12-" + Math.random().toString(36).slice(2));
+const tmp = () =>
+  join(tmpdir(), "manus-m12-" + Math.random().toString(36).slice(2));
 
 describe("stage 1: LocalFileStorage 本地文件存储", () => {
   it("save 落盘并返回带 id/size/extension 的 File 元数据", async () => {
@@ -42,12 +43,21 @@ describe("stage 2: aggregateHealth 健康聚合", () => {
     },
   });
   it("全 ok → 整体 ok，逐条明细齐全", async () => {
-    const r = await aggregateHealth([checker("redis", "ok"), checker("postgres", "ok")]);
+    const r = await aggregateHealth([
+      checker("redis", "ok"),
+      checker("postgres", "ok"),
+    ]);
     expect(r.status).toBe("ok");
-    expect(r.services.map((s) => s.service).sort()).toEqual(["postgres", "redis"]);
+    expect(r.services.map((s) => s.service).sort()).toEqual([
+      "postgres",
+      "redis",
+    ]);
   });
   it("任一 error → 整体 error", async () => {
-    const r = await aggregateHealth([checker("redis", "ok"), checker("postgres", "error")]);
+    const r = await aggregateHealth([
+      checker("redis", "ok"),
+      checker("postgres", "error"),
+    ]);
     expect(r.status).toBe("error");
   });
   it("checker 自己抛异常也收敛成 error，聚合器永不抛", async () => {
@@ -63,7 +73,10 @@ describe("stage 2: aggregateHealth 健康聚合", () => {
 });
 
 describe("stage 3: docker-compose.yml 四件套编排", () => {
-  const yml = readFileSync(join(import.meta.dirname, "../docker-compose.yml"), "utf8");
+  const yml = readFileSync(
+    join(import.meta.dirname, "../docker-compose.yml"),
+    "utf8",
+  );
   it("声明了 redis / postgres / sandbox / api 四个服务", () => {
     for (const svc of ["redis:", "postgres:", "sandbox:", "api:"]) {
       expect(yml).toContain(svc);
@@ -94,7 +107,9 @@ describe("stage 4: runEval 示例任务评估回归", () => {
     const report = await runEval([failing, ...m12Cases]);
     expect(report.failed).toBe(1);
     expect(report.passed).toBe(3);
-    expect(report.results.find((r) => r.name === "always-fail")?.reason).toBe("故意失败");
+    expect(report.results.find((r) => r.name === "always-fail")?.reason).toBe(
+      "故意失败",
+    );
   });
 });
 

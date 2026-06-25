@@ -33,7 +33,24 @@ export interface CapstoneSummary {
 //   3. 评估回归：evalReport = await runEval(m12Cases)
 //   4. return { storageRoundTrip, health: report.status, evalPassed: evalReport.passed, evalTotal: evalReport.total }
 export async function runCapstone(): Promise<CapstoneSummary> {
-  throw new Error("TODO: stage 5 — runCapstone");
+  const storage = new LocalFileStorage(
+    join(tmpdir(), "manus-capstone-" + Date.now()),
+  );
+  const payload = new TextEncoder().encode("hello capstone");
+  const saved = await storage.save("note.txt", payload);
+  const { bytes } = await storage.load(saved.id);
+  const storageRoundTrip = Buffer.from(bytes).equals(Buffer.from(payload));
+  const report = await aggregateHealth([
+    okChecker("redis"),
+    okChecker("postgres"),
+  ]);
+  const evalReport = await runEval(m12Cases);
+  return {
+    storageRoundTrip,
+    health: report.status,
+    evalPassed: evalReport.passed,
+    evalTotal: evalReport.total,
+  };
 }
 
 if (process.argv[1]?.endsWith("e2e_m12.ts")) {
