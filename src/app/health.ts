@@ -19,5 +19,15 @@ export interface HealthReport {
 export async function aggregateHealth(
   checkers: HealthChecker[],
 ): Promise<HealthReport> {
-  throw new Error("TODO: stage 2 — aggregateHealth");
+  const services: HealthStatus[] = await Promise.all(
+    checkers.map(async (c) => {
+      try {
+        return await c.check();
+      } catch (e) {
+        return { service: "unknown", status: "error", details: String(e) };
+      }
+    }),
+  );
+  const status = services.every((s) => s.status === "ok") ? "ok" : "error";
+  return { status, services };
 }
