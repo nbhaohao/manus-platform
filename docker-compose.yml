@@ -26,10 +26,28 @@ services:
       timeout: 3s
       retries: 5
 
-  # TODO stage 3: 仿照上面 redis / postgres，补两个服务（写成真正的 YAML 条目，不是注释）：
-  #   ① 沙箱服务 —— 服务名 sandbox，build 指向 ./workspace，端口 8080，
-  #      并配一段就绪探活（仿上面 redis 那段：curl http://localhost:8080/health）。
-  #   ② API 服务 —— 服务名 api，build 指向当前目录（.），端口 8000，
-  #      环境变量 REDIS_HOST=redis、LLM_API_KEY、DATABASE_URL=postgres://manus:manus@postgres:5432/manus，
-  #      并声明它对 redis/postgres/sandbox 三者的「就绪依赖」（查 compose 文档：让一个服务等另一个 healthy 后才启动）
-  #      —— 否则 api 启动期连数据库/缓存会因为对方还没起来而报错。
+  sandbox:
+    build: ./workspace
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_HOST: redis
+      LLM_API_KEY: ${LLM_API_KEY}
+      DATABASE_URL: postgres://manus:manus@postgres:5432/manus
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      sandbox:
+        condition: service_healthy
