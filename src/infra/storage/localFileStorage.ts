@@ -13,22 +13,30 @@ export class LocalFileStorage implements FileStorage {
   constructor(private readonly baseDir: string) {}
 
   // ── Stage 1: 存字节 → 写盘 + 建 File 元数据（核心手写）────────────────────
-  // TODO stage 1: 落盘并返回 File 元数据
-  //   1. id = randomUUID()；extension = extname(filename)（含点，无扩展则 ""）
-  //   2. key = id + extension（存储相对路径，将来即 COS object key）；filepath = join(baseDir, key)
-  //   3. await mkdir(baseDir, { recursive:true })；await writeFile(filepath, bytes)
-  //   4. file = createFile({ id, filename, filepath, key, extension, size: bytes.byteLength })
-  //   5. this.index.set(id, file)；return file
   async save(filename: string, bytes: Uint8Array): Promise<File> {
-    throw new Error("TODO: stage 1 — LocalFileStorage.save");
+    const id = randomUUID();
+    const extension = extname(filename);
+    const key = id + extension;
+    const filepath = join(this.baseDir, key);
+    await mkdir(this.baseDir, { recursive: true });
+    await writeFile(filepath, bytes);
+    const file = createFile({
+      id,
+      filename,
+      filepath,
+      key,
+      extension,
+      size: bytes.byteLength,
+    });
+    this.index.set(id, file);
+    return file;
   }
 
   // ── Stage 1: 按 id 取回字节 + 元数据（不存在抛错）（核心手写）─────────────
-  // TODO stage 1: 从内存索引找元数据 → 读盘
-  //   1. file = this.index.get(fileId)；不存在 → throw new Error("文件不存在: " + fileId)
-  //   2. bytes = await readFile(file.filepath)
-  //   3. return { file, bytes }
   async load(fileId: string): Promise<{ file: File; bytes: Uint8Array }> {
-    throw new Error("TODO: stage 1 — LocalFileStorage.load");
+    const file = this.index.get(fileId);
+    if (!file) throw new Error("文件不存在: " + fileId);
+    const bytes = await readFile(file.filepath);
+    return { file, bytes };
   }
 }
